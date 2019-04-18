@@ -1,17 +1,59 @@
 //
-// Created by m8792 on 2019/4/16.
+// Created by Administrator on 2018/12/28.
 //
 
-#ifndef AVENUE_STATUS_H
-#define AVENUE_STATUS_H
+#ifndef GOPSAGENT_STATUS_HPP
+#define GOPSAGENT_STATUS_HPP
 
-namespace comm {
+#include <string>
 
 class status {
+public:
+    enum {
+        FILE_NOT_FOUND = -999,
+        MD5_NOT_MATCH,
+        PARSE_JSON_ERROR,
+        SYSTEM_ERROR,
+        UNKNOWN_ERROR,
+        INVALID_HANDLE,
+        PARAMETERS_ERROR,
+        CMD_FAILED,
+        TIMEOUT,
+        RUNTIME_ERROR,
+        TASK_ALREADY_RUNNING,
+        TEMPORARY_UNAVAILABLE,
+        NO_RESOURCES,
+        DIST_FILE_DOWNLOAD_FAILED,
+        OPERATION_CANCELLED,
+        OK = 0
+    };
 
+    using status_code = int;
+
+    status();
+
+    status(status_code code);
+
+    status(status_code code, const std::string &message);
+
+    void clear();
+
+    void assign(status_code code, const std::string &message);
+
+    operator bool();
+
+    status_code code() const;
+
+    const std::string &message() const;
+
+    static status system_error();
+
+private:
+    status_code code_;
+    std::string message_;
+
+    static std::string get_error_message(int error_no);
 };
 
-}
 
-
-#endif //AVENUE_STATUS_H
+#endif //GOPSAGENT_STATUS_HPP
