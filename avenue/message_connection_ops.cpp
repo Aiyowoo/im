@@ -28,21 +28,24 @@ void message_connection_ops::send_request(std::unique_ptr<message> request) {
 
 void message_connection_ops::send_request(std::unique_ptr<message> request,
                                           message_connection_ops::request_callback_type handler) {
-    post([this, &request, handler]() mutable {
-        do_send_request(std::move(request), std::move(handler));
+    message *msg = request.release();
+    post([this, msg, handler]() mutable {
+        do_send_request(std::unique_ptr<message>(msg), std::move(handler));
     });
 }
 
 void message_connection_ops::timed_send_request(std::unique_ptr<message> request, uint32_t timeout_seconds,
                                                 message_connection_ops::request_callback_type handler) {
-    post([this, &request, timeout_seconds, handler]() {
-        do_timed_send_request(std::move(request), timeout_seconds, handler);
+    message *msg = request.release();
+    post([this, msg, timeout_seconds, handler]() mutable {
+        do_timed_send_request(std::unique_ptr<message>(msg), timeout_seconds, handler);
     });
 }
 
 void message_connection_ops::send_response(std::unique_ptr<message> response) {
-    post([this, &response] {
-        do_send_response(std::move(response));
+    message *msg = response.release();
+    post([this, msg]() mutable {
+        do_send_response(std::unique_ptr<message>(msg));
     });
 }
 

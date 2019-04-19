@@ -18,10 +18,12 @@
 namespace avenue {
 
 class message_connection_ops {
+public:
     using stream_type = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
     using request_callback_type = std::function<void(std::unique_ptr<message> response, const status &)>;
     using request_handler_type = std::function<void(std::unique_ptr<message> request, const status &)>;
 
+private:
     struct timer_pair {
         std::chrono::system_clock::time_point deadline;
         uint32_t request_id;
@@ -86,11 +88,12 @@ public:
      */
     void stop();
 
-private:
     template<typename ...Args>
     void post(Args &&...args) {
         stream_.get_io_context().post(std::forward<Args &&>(args)...);
     }
+
+private:
 
     void do_send_request(std::unique_ptr<message> request, request_callback_type handler);
 
