@@ -29,7 +29,7 @@ void status::assign(status::status_code code, const std::string &message) {
     message_ = message;
 }
 
-status::operator bool() {
+status::operator bool() const {
     return code_ == 0;
 }
 

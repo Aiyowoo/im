@@ -7,10 +7,21 @@
 namespace avenue {
 
 template<typename RequestHandler>
-void server_connection<RequestHandler>::start() {
+void server_connection<RequestHandler>::start(started_handler_type handler) {
     auto self = shared_from_this();
     post([this, self] {
-        do_start();
+        timer_.expires_after(std::chrono::seconds(2));
+        timer_.async_wait([this, self = shared_from_this()](boost::system::error_code ec) {
+            if (ec != boost::asio::error::operation_aborted) {
+                // ssl 握手超时
+                stream_.next_layer().close(ec);
+            }
+        });
+
+        stream_.async_handshake(boost::asio::ssl::stream_base::server,
+                                [this, self = shared_from_this(), handler](boost::system::error_code ec) {
+                                    handler(ec);
+                                });
     });
 }
 
@@ -60,7 +71,7 @@ void server_connection<RequestHandler>::do_start() {
 template<typename RequestHandler>
 void server_connection<RequestHandler>::do_receive_request(std::unique_ptr<message> request,
                                                            const status &s) {
-    request_handler_(*this, std::move(request), s);
+    request_handler_(shared_from_this(), std::move(request), s);
 }
 
 template<typename RequestHandler>

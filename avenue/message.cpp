@@ -1,6 +1,5 @@
-#include "message.hpp"
 
-#include <cassert>
+#include "message.hpp"
 
 #ifdef WIN32
 
@@ -11,6 +10,8 @@
 #include <apra/inet.h>
 
 #endif
+
+#include <cassert>
 
 namespace avenue {
 

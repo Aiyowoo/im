@@ -5,7 +5,7 @@
 #include <boost/optional.hpp>
 #include <atomic>
 
-#include "listener.h"
+#include "listener.hpp"
 
 namespace avenue {
 

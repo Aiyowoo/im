@@ -2,7 +2,13 @@
 #ifndef AVENUE_MESSAGE_H
 #define AVENUE_MESSAGE_H
 
-#include "../comm/status.hpp"
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <comm/status.hpp>
+
+#include <fmt/format.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -112,5 +118,18 @@ private:
 void swap(message &lhs, message &rhs) noexcept;
 
 }
+
+template<>
+struct fmt::formatter<avenue::message> {
+    template<typename ParseContext>
+    constexpr auto parse(ParseContext &ctx) { return ctx.begin(); }
+
+    template<typename FormatContext>
+    auto format(const avenue::message &msg, FormatContext &ctx) {
+        return format_to(ctx.out, "%s message service_id[%d] message_id[%d] sequence[%d] body_len[%d]",
+                         (msg.is_request() ? "request" : "response"), msg.get_service_id(),
+                         msg.get_message_id(), msg.get_sequence(), msg.get_body_len());
+    }
+};
 
 #endif

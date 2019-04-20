@@ -40,7 +40,7 @@ public:
 
     void assign(status_code code, const std::string &message);
 
-    operator bool();
+    operator bool() const;
 
     status_code code() const;
 

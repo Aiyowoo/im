@@ -2,9 +2,9 @@
 // Created by m8792 on 2019/4/16.
 //
 
-#include "tcp_server.h"
-#include "logger.h"
-#include "listener.h"
+#include "tcp_server.hpp"
+#include "logger.hpp"
+#include "listener.hpp"
 
 namespace asio = boost::asio;
 using tcp = asio::ip::tcp;
@@ -79,8 +79,8 @@ boost::asio::io_context &tcp_server::get_main_io_context() {
 
 boost::asio::io_context &tcp_server::get_work_io_context() {
     if (concurrency_count_ > 1) {
-        ++next_;
-        return *io_services_[next_ % (concurrency_count_ - 1)];
+        next_ = (next_ + 1) % (concurrency_count_ - 1);
+        return *io_services_[next_];
     }
     return *io_services_.back();
 }

@@ -5,8 +5,9 @@
 #ifndef AVENUE_MESSAGE_CONNECTION_HPP
 #define AVENUE_MESSAGE_CONNECTION_HPP
 
-#include "../comm/status.hpp"
 #include "message.hpp"
+
+#include <comm/status.hpp>
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>

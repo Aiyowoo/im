@@ -10,12 +10,12 @@
 
 namespace avenue {
 
-using connection_id_type = uint64_t;
-#define INVALID_CONNECTION_ID 0
-
 template<typename RequestHandler>
 class server_connection : public std::enable_shared_from_this<server_connection<RequestHandler>> {
     using stream_type = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
+    using started_handler_type = std::function<void(const status &)>;
+
+    using starter_handler_type = std::function<void(const status &s)>;
 
     stream_type stream_;
 
@@ -23,11 +23,13 @@ class server_connection : public std::enable_shared_from_this<server_connection<
 
     RequestHandler request_handler_;
 
+    boost::asio::system_timer timer_;
+
 public:
     template<typename ...Args>
     server_connection(Args &&...args);
 
-    void start();
+    void start(started_handler_type handler);
 
     void on_receive_request(std::unique_ptr<message> request, const status &s);
 
@@ -58,8 +60,7 @@ private:
 template<typename RequestHandler>
 template<typename... Args>
 server_connection<RequestHandler>::server_connection(Args &&... args)
-        :stream_(std::forward<Args &&>(args)...), message_ops_(stream_),
-         connected(true), id(INVALID_CONNECTION_ID) {
+        :stream_(std::forward<Args &&>(args)...), message_ops_(stream_), timer_(stream_.get_io_context()) {
 }
 
 }
