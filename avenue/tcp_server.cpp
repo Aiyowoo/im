@@ -46,11 +46,7 @@ void tcp_server::start(size_t concurrency_count) {
         });
     }
 
-    try {
-        start_listening();
-    } catch (const std::exception &e) {
-        ERROR_LOG("encountered an exception[%s] ...", e.what());
-    }
+    start_listening();
 
     for (auto &t:threads_) {
         t.join();
@@ -67,6 +63,7 @@ void tcp_server::stop() {
 void tcp_server::start_listening() {
     auto &io_ctx = get_main_io_context();
     for (size_t i = 0; i < listen_addrs_.size(); ++i) {
+        DEBUG_LOG("listening on [{}:{}]", listen_addrs_[i].address().to_string(), listen_addrs_[i].port());
         auto listener_ptr = std::make_shared<listener>(*this, listen_addrs_[i], connection_handlers_[i]);
         listener_ptr->start();
     }

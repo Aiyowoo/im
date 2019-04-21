@@ -19,7 +19,7 @@ client_connection::client_connection(boost::asio::io_context &context,
 }
 
 void client_connection::async_connect(const std::string &host, const std::string &service,
-                                      connect_handler_type handler) {
+                                      request_handler_type handler) {
     resolver_.async_resolve(host, service, [this, self = shared_from_this(), handler](boost::system::error_code ec,
                                                                                       tcp::resolver::iterator it) {
         on_resolver(it, ec, handler);
@@ -48,9 +48,10 @@ void client_connection::close() {
 }
 
 void client_connection::on_resolver(boost::asio::ip::tcp::resolver::iterator it, boost::system::error_code ec,
-                                    client_connection::connect_handler_type handler) {
+                                    request_handler_type handler) {
     if (ec) {
-        handler(ec);
+        status s(ec.value(), ec.message());
+        handler(nullptr, s);
         return;
     }
 
@@ -58,13 +59,18 @@ void client_connection::on_resolver(boost::asio::ip::tcp::resolver::iterator it,
                         [this, self = shared_from_this(), handler](boost::system::error_code ec,
                                                                    tcp::resolver::iterator) {
                             if (ec) {
-                                handler(ec);
+                                status s;
+                                handler(nullptr, s);
                                 return;
                             }
 
                             stream_.async_handshake(ssl::stream_base::client,
                                                     [this, self, handler](boost::system::error_code ec) {
-                                                        handler(ec);
+                                                        status s(ec.value(), ec.message());
+                                                        if (s) {
+                                                            message_ops_.start(handler);
+                                                        }
+                                                        handler(nullptr, s);
                                                     });
                         });
 }

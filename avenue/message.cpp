@@ -24,6 +24,7 @@ message::message(uint32_t service_id, uint32_t message_id, uint32_t sequence) {
     set_sequence(sequence);
     set_options(0);
     set_body_len(0);
+    data_ = nullptr;
 }
 
 message::message(message &&other) noexcept {

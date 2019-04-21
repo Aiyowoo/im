@@ -3,13 +3,14 @@
 // 2019/4/19 22:03
 
 #include "server_connection.hpp"
+#include <memory>
 
 namespace avenue {
 
 template<typename RequestHandler>
 void server_connection<RequestHandler>::start(started_handler_type handler) {
     auto self = shared_from_this();
-    post([this, self] {
+    post([this, self, handler] {
         timer_.expires_after(std::chrono::seconds(2));
         timer_.async_wait([this, self = shared_from_this()](boost::system::error_code ec) {
             if (ec != boost::asio::error::operation_aborted) {
@@ -20,7 +21,14 @@ void server_connection<RequestHandler>::start(started_handler_type handler) {
 
         stream_.async_handshake(boost::asio::ssl::stream_base::server,
                                 [this, self = shared_from_this(), handler](boost::system::error_code ec) {
-                                    handler(ec);
+                                    status s(ec.value(), ec.message());
+                                    timer_.cancel(ec);
+                                    if (!s) {
+                                        handler(s);
+                                        return;
+                                    }
+                                    do_start();
+                                    handler(s);
                                 });
     });
 }
@@ -28,8 +36,9 @@ void server_connection<RequestHandler>::start(started_handler_type handler) {
 template<typename RequestHandler>
 void server_connection<RequestHandler>::on_receive_request(std::unique_ptr<message> request, const status &s) {
     auto self = shared_from_this();
-    post([this, self, r = std::move(request), s]() mutable {
-        do_receive_request(std::move(r), s);
+    message *msg = request.release();
+    post([this, self, msg, s] {
+        do_receive_request(std::unique_ptr<message>(msg), s);
     });
 }
 

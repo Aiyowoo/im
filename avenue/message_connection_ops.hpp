@@ -59,6 +59,12 @@ private:
 
     bool is_timer_running_;
 
+    /*
+     * 连接信息
+     */
+    std::string local_address_;
+    std::string remote_address_;
+
 public:
     explicit message_connection_ops(stream_type &stream);
 

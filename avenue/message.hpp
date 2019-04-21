@@ -126,7 +126,7 @@ struct fmt::formatter<avenue::message> {
 
     template<typename FormatContext>
     auto format(const avenue::message &msg, FormatContext &ctx) {
-        return format_to(ctx.out, "%s message service_id[%d] message_id[%d] sequence[%d] body_len[%d]",
+        return format_to(ctx.out(), "{} message service_id[{}] message_id[{}] sequence[{}] body_len[{}]",
                          (msg.is_request() ? "request" : "response"), msg.get_service_id(),
                          msg.get_message_id(), msg.get_sequence(), msg.get_body_len());
     }

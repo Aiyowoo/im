@@ -23,12 +23,15 @@ public:
 
     using connection_type = avenue::server_connection<request_handler_type>;
 
-public:
-
     struct request_handler_type {
         void operator()(std::shared_ptr<connection_type> conn_ptr, std::unique_ptr<avenue::message> msg,
-                        boost::system::error_code ec);
+                        const status &s);
     };
+
+public:
+    reverse_echo_server();
+
+    void run();
 
     void on_receive_connection(boost::asio::ip::tcp::socket &socket);
 };

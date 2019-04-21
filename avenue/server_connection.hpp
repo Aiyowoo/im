@@ -15,8 +15,6 @@ class server_connection : public std::enable_shared_from_this<server_connection<
     using stream_type = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
     using started_handler_type = std::function<void(const status &)>;
 
-    using starter_handler_type = std::function<void(const status &s)>;
-
     stream_type stream_;
 
     message_connection_ops message_ops_;
@@ -45,7 +43,7 @@ public:
 
     template<typename ...Args>
     void post(Args &&...args) {
-        stream_.post(std::forward<Args &&>(args)...);
+        message_ops_.post(std::forward<Args &&>(args)...);
     }
 
 private:
@@ -64,5 +62,7 @@ server_connection<RequestHandler>::server_connection(Args &&... args)
 }
 
 }
+
+#include "server_connection.ipp"
 
 #endif //AVENUE_SERVER_CONNECTION_HPP

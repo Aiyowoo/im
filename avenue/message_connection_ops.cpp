@@ -4,6 +4,7 @@
 
 #include "message_connection_ops.hpp"
 #include "message.hpp"
+#include "logger.hpp"
 
 namespace avenue {
 
@@ -150,6 +151,8 @@ void message_connection_ops::send_message() {
         return;
     }
 
+    DEBUG_LOG("try send {}->{}, {}", local_address_, remote_address_, *msg);
+
     boost::asio::const_buffer buffer(reinterpret_cast<const char *>(msg->get_header()),
                                      sizeof(message_header));
     boost::asio::async_write(stream_, buffer, boost::asio::transfer_all(),
@@ -160,6 +163,9 @@ void message_connection_ops::send_message() {
 
 void message_connection_ops::on_send_message_header(boost::system::error_code ec,
                                                     size_t bytes_send) {
+    DEBUG_LOG("send header {}->{}, {}, result code[{}] message[{}]", local_address_, remote_address_,
+              *wait_send_messages_.front(), ec.value(), ec.message());
+
     if (ec) {
         handle_message_sent(ec);
         return;
@@ -189,6 +195,9 @@ void message_connection_ops::on_send_message_body(boost::system::error_code ec, 
 
 void message_connection_ops::handle_message_sent(boost::system::error_code ec) {
     assert(!wait_send_messages_.empty());
+
+    DEBUG_LOG("send header {}->{}, {}, result code[{}] message[{}]", local_address_, remote_address_,
+              *wait_send_messages_.front(), ec.value(), ec.message());
 
     uint32_t seq = wait_send_messages_.front()->get_sequence();
 
@@ -233,6 +242,13 @@ void message_connection_ops::do_start(request_handler_type request_handler) {
     want_stop_ = false;
     is_reading_ = true;
     is_writing_ = is_timer_running_ = false;
+
+    auto local_ep = stream_.next_layer().local_endpoint();
+    local_address_ = local_ep.address().to_string() + ":" + std::to_string(local_ep.port());
+
+    auto remote_ep = stream_.next_layer().remote_endpoint();
+    remote_address_ = remote_ep.address().to_string() + ":" + std::to_string(remote_ep.port());
+
     read_message();
 }
 
@@ -260,6 +276,8 @@ void message_connection_ops::on_received_message_header(boost::system::error_cod
                                                         size_t bytes_read) {
     status s;
     if (ec) {
+        ERROR_LOG("{}->{}, failed to read message due to error[{}]",
+                  remote_address_, local_address_, ec.message());
         s.assign(ec.value(), "failed to read message header due to error[" + ec.message() + "]");
         handle_receive_message_error(s);
         return;
@@ -290,10 +308,13 @@ void message_connection_ops::on_received_message_header(boost::system::error_cod
 void message_connection_ops::on_received_message(boost::system::error_code ec, size_t bytes_read) {
     status s;
     if (ec) {
+        ERROR_LOG("{}->{}, failed to read message due to error[{}]", remote_address_, local_address_, ec.message());
         s.assign(ec.value(), "failed to read message body due to error[" + ec.message() + "]");
         handle_receive_message_error(s);
         return;
     }
+
+    DEBUG_LOG("received message {}->{}, {}", remote_address_, local_address_, *received_message_);
 
     if (received_message_->is_request()) {
         handle_request(std::unique_ptr<message>(received_message_), s);
