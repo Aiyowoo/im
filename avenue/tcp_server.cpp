@@ -3,8 +3,8 @@
 //
 
 #include "tcp_server.hpp"
-#include "logger.hpp"
 #include "listener.hpp"
+#include "details/log_helper.hpp"
 
 namespace asio = boost::asio;
 using tcp = asio::ip::tcp;

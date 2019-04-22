@@ -25,6 +25,7 @@ public:
         NO_RESOURCES,
         DIST_FILE_DOWNLOAD_FAILED,
         OPERATION_CANCELLED,
+        HALF_CLOSED,
         OK = 0
     };
 

@@ -29,6 +29,9 @@ public:
     void start();
 
     void on_accept(boost::system::error_code ec);
+
+private:
+    std::string get_extra_log_info();
 };
 
 }

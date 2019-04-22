@@ -1,18 +1,30 @@
-//
-// Created by m8792 on 2019/4/16.
-//
+//  logger.hpp
+// Created by m8792 on 2019/4/21.
+// 2019/4/21 22:48
 
-#ifndef AVENUE_LOGGER_H
-#define AVENUE_LOGGER_H
+#ifndef AVENUE_LOGGER_HPP
+#define AVENUE_LOGGER_HPP
 
-#include <string.h>
-#include <fmt/printf.h>
+#include <string>
 
-#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+namespace avenue {
 
-#define DEBUG_LOG(format, ...) do { fmt::print("file[{}] line[{}] " format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
-#define INFO_LOG(format, ...) do { fmt::print("file[{}] line[{}] " format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
-#define WARNING_LOG(format, ...) do { fmt::print("file[{}] line[{}] " format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
-#define ERROR_LOG(format, ...) do { fmt::print("file[{}] line[{}] " format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
+class log_interface {
+public:
+    virtual void debug_log(const std::string &) = 0;
 
-#endif //AVENUE_LOGGER_H
+    virtual void info_log(const std::string &) = 0;
+
+    virtual void warn_log(const std::string &) = 0;
+
+    virtual void error_log(const std::string &) = 0;
+};
+
+void set_logger(log_interface *logger);
+
+log_interface *get_logger();
+
+}
+
+
+#endif //AVENUE_LOGGER_HPP

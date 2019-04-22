@@ -11,10 +11,11 @@ INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES($ENV{IM_INSTALL_PATH}/include)
 LINK_DIRECTORIES($ENV{IM_INSTALL_PATH}/lib/comm)
 
-ADD_LIBRARY(avenue message.cpp message.hpp tcp_server.cpp tcp_server.hpp logger.cpp logger.hpp
-            listener.cpp listener.hpp message_connection_ops.cpp
-            message_connection_ops.hpp server_connection.ipp server_connection.hpp
-            client_connection.cpp client_connection.hpp)
+ADD_DEFINITIONS(/DDEBUG)
+
+ADD_LIBRARY(avenue message.cpp message.hpp tcp_server.cpp tcp_server.hpp
+            listener.cpp listener.hpp
+            logger.cpp logger.hpp details/default_logger.hpp details/log_helper.hpp message_connection.cpp message_connection.hpp)
 TARGET_LINK_LIBRARIES(avenue comm fmt::fmt fmt::fmt-header-only)
 
 INSTALL(TARGETS avenue DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/avenue)

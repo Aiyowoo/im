@@ -6,7 +6,9 @@
 
 #include "listener.hpp"
 #include "tcp_server.hpp"
-#include "logger.hpp"
+#include "details/log_helper.hpp"
+
+#include <fmt/format.h>
 
 using tcp = boost::asio::ip::tcp;
 
@@ -42,6 +44,10 @@ void listener::on_accept(boost::system::error_code ec) {
     acceptor_.async_accept(*socket_ptr_, [this, self = shared_from_this()](boost::system::error_code ec) {
         on_accept(ec);
     });
+}
+
+std::string listener::get_extra_log_info() {
+    return fmt::format("listener[{}:{}]", listen_addr_.address().to_string(), listen_addr_.port());
 }
 
 }
