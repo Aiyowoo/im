@@ -11,7 +11,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
-#include <forward_list>
+#include <list>
 #include <queue>
 #include <map>
 
@@ -55,10 +55,10 @@ class message_connection : public std::enable_shared_from_this<message_connectio
      */
     bool write_closed_;
 
-    bool want_close_write_;
+    bool want_close_;
 
     /* 消息相关 */
-    std::forward_list<message *> waiting_messages_;
+    std::list<message *> waiting_messages_;
     std::map<uint32_t, request_callback_type> request_callbacks_;
     struct deadline_request_id_p {
         clock_type::time_point deadline;
@@ -72,6 +72,9 @@ class message_connection : public std::enable_shared_from_this<message_connectio
     deadline_heap_type deadline_heap_;
 
     boost::asio::system_timer request_timer_;
+
+    /* receive_message */
+    message *recv_message_;
 
 public:
 
@@ -93,25 +96,28 @@ public:
     ~message_connection();
 
     /*
-     * 建立建立 -> ssl handshake -> on_initialized
-     * 子类需要调用父类的on_initialized，以完成父类中的数据的初始化
+     * 建立建立 -> initialize -> on_initialized
+     * 只有在on_initialized被调用之后，才能使用该连接发送消息
      */
     virtual void on_initialized(const status &s);
 
     /*
      * 收到请求后的处理
      */
-    virtual void on_receive_request(message *msg, const status &s) = 0;
+    virtual void on_receive_request(message *msg) = 0;
 
     /*
      * 连接被关闭
      * 连接被完全关闭，所有的消息都已正确处理后调用
      */
-    virtual void on_close(const status &s) = 0;
+    virtual void on_closed() = 0;
 
     /*
-     * 消息相关操作
-    */
+     * 进行初始化
+     */
+    void initialize();
+
+    /* 消息相关操作 */
 
     /*
      * 发送请求
@@ -134,6 +140,8 @@ public:
      * 主动关闭写段，表示不再发送请求
      * 在发送完所有的response之后，关闭socket write
      * 对于对端发送的请求，直接丢弃
+     *
+     * 想要关闭时，一定要调用close
      */
     void close();
 
@@ -149,6 +157,55 @@ private:
 
     void do_close();
 
+    /*
+     * 发送消息
+     * 如果已经在async_write，则直接加入waiting_messages_
+     * 如果没有在发送，在加入waiting_messages_，之后开始async_write
+     */
+    void send_message(message *msg);
+
+    /*
+     * 发送waiting_messages_队列中的消息，
+     * 直到waiting_messages_为空
+     */
+    void do_send_message();
+
+    /*
+     * 发送消息出错时，进行处理
+     * 一般发送消息出错后，就不能在写消息了，
+     * 会等待read 也关闭，调用on_close
+     */
+    void handle_write_error(boost::system::error_code ec);
+
+    /*
+     * 读取消息出错时，进行处理
+     * 将停止读取消息；如果write并没有close，
+     * 则将继续发送完所有的response后，停止
+     */
+    void handle_read_error(boost::system::error_code ec);
+
+    void start_receiving_message();
+
+    /*
+     * 处理收到的消息，可能是response也可能是request
+     */
+    void handle_received_message(message *msg);
+
+    /*
+     * 处理收到的请求
+     */
+    void handle_request(message *msg);
+
+    /*
+     * 处理收到的响应
+     */
+    void handle_response(message *msg);
+
+    /*
+     * 对请求进行计时
+     */
+    void start_timing();
+
 #ifdef DEBUG
     /*
      * 调试信息
@@ -162,9 +219,11 @@ private:
     uint32_t d_received_request_count_ = 0;
     uint32_t d_sent_response_count_ = 0;
     uint32_t d_timeout_request_count_ = 0;
+
     std::string get_current_time_str() {
         return boost::posix_time::to_iso_extended_string(boost::posix_time::microsec_clock::local_time());
     }
+
     std::string get_extra_log_info();
 
 #endif

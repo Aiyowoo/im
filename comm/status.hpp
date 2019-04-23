@@ -26,6 +26,8 @@ public:
         DIST_FILE_DOWNLOAD_FAILED,
         OPERATION_CANCELLED,
         HALF_CLOSED,
+        SEND_MESSAGE_ERROR,
+        RECV_MESSAGE_ERROR,
         OK = 0
     };
 
