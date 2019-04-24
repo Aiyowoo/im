@@ -11,8 +11,8 @@ using tcp = asio::ip::tcp;
 
 namespace avenue {
 
-client_connection::client_connection(boost::asio::io_context context,
-                                     boost::asio::ssl::context ssl_context)
+client_connection::client_connection(asio::io_context &context,
+                                     ssl::context &ssl_context)
         : message_connection(context, ssl_context), resolver_(context) {
 }
 
@@ -44,10 +44,10 @@ void client_connection::run(const std::string &host, const std::string &service)
                                                             return;
                                                         }
 
-                                                        DEBUG_LOG("client_connection[{}] connect to {}:{} {}:{}",
-                                                                  it->host_name(), it->service_name(),
-                                                                  it->endpoint().address().to_string(),
-                                                                  it->endpoint().port());
+//                                                        DEBUG_LOG("client_connection[{}] connect to {}:{} {}:{}",
+//                                                                  it->host_name(), it->service_name(),
+//                                                                  it->endpoint().address().to_string(),
+//                                                                  it->endpoint().port());
 
                                                         on_connected();
                                                     });
@@ -55,15 +55,16 @@ void client_connection::run(const std::string &host, const std::string &service)
 }
 
 void client_connection::on_connected() {
-    stream().async_handshake(ssl::stream_base::client, [this, self = shared_from_base()](boost::system::error_code ec) {
-        if (!ec) {
-            initialize();
-        }
-        status s(ec.value(),
-                 fmt::format("failed to handshake with server due to error[{}]",
-                             ec.message()));
-        on_initialized(s);
-    });
+    stream().async_handshake(ssl::stream_base::client,
+                             [this, self = shared_from_base()](boost::system::error_code ec) {
+                                 if (!ec) {
+                                     initialize();
+                                 }
+                                 status s(ec.value(),
+                                          fmt::format("failed to handshake with server due to error[{}]",
+                                                      ec.message()));
+                                 on_initialized(s);
+                             });
 }
 
 

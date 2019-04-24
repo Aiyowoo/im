@@ -7,6 +7,7 @@
 
 #include <comm/status.hpp>
 #include <avenue/tcp_server.hpp>
+#include <avenue/message.hpp>
 #include <avenue/server_connection.hpp>
 
 #include <boost/system/error_code.hpp>
@@ -17,16 +18,6 @@
 class reverse_echo_server {
     avenue::tcp_server server_;
     boost::asio::ssl::context ssl_context_;
-
-public:
-    struct request_handler_type;
-
-    using connection_type = avenue::server_connection<request_handler_type>;
-
-    struct request_handler_type {
-        void operator()(std::shared_ptr<connection_type> conn_ptr, std::unique_ptr<avenue::message> msg,
-                        const status &s);
-    };
 
 public:
     reverse_echo_server();

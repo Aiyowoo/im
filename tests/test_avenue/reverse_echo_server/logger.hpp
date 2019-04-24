@@ -10,10 +10,10 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
-#define DEBUG_LOG(format, ...) do { fmt::printf("file[%s] line[%d]" format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
-#define INFO_LOG(format, ...) do { fmt::printf("file[%s] line[%d]" format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
-#define WARNING_LOG(format, ...) do { fmt::printf("file[%s] line[%d]" format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
-#define ERROR_LOG(format, ...) do { fmt::printf("file[%s] line[%d]" format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
+#define DEBUG_LOG(format, ...) do { fmt::print("file[{}] line[{}]" format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
+#define INFO_LOG(format, ...) do { fmt::printf("file[{}] line[{}]" format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
+#define WARNING_LOG(format, ...) do { fmt::printf("file[{}] line[{}]" format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
+#define ERROR_LOG(format, ...) do { fmt::printf("file[{}] line[{}]" format "\n", __FILENAME__, __LINE__, ##__VA_ARGS__);} while(0)
 
 
 #endif //TEST_LOGGER_HPP

@@ -134,7 +134,7 @@ public:
      * 因为如果需要超时功能，可以使用time_request接口来实现
      * 对response多长时间发送没有意义，因为发送了对方不一定能收到，收到了不一定会处理，所以超时需要在request接口上做
      */
-    void response(message *msg, request_callback_type handler);
+    void response(message *msg);
 
     /*
      * 主动关闭写段，表示不再发送请求
@@ -158,7 +158,7 @@ private:
 
     void do_request(message *msg, clock_type::time_point deadline, request_callback_type handler);
 
-    void do_response(message *msg, request_callback_type handler);
+    void do_response(message *msg);
 
     void do_close();
 

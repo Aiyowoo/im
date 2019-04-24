@@ -66,10 +66,10 @@ void message_connection::timed_request(message *msg, clock_type::duration timeou
     });
 }
 
-void message_connection::response(message *msg, message_connection::request_callback_type handler) {
+void message_connection::response(message *msg) {
     assert(msg);
-    post([this, self = shared_from_this(), msg, handler] {
-        do_response(msg, handler);
+    post([this, self = shared_from_this(), msg] {
+        do_response(msg);
     });
 }
 
@@ -126,7 +126,7 @@ void message_connection::do_request(message *msg, std::chrono::system_clock::tim
     send_message(msg);
 }
 
-void message_connection::do_response(message *msg, request_callback_type handler) {
+void message_connection::do_response(message *msg) {
     assert(msg && !msg->is_request());
 
     DEBUG_LOG("msg[{}]");

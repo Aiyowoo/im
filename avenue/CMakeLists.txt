@@ -19,6 +19,5 @@ ADD_LIBRARY(avenue message.cpp message.hpp tcp_server.cpp tcp_server.hpp
 TARGET_LINK_LIBRARIES(avenue comm fmt::fmt fmt::fmt-header-only)
 
 INSTALL(TARGETS avenue DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/avenue)
-INSTALL(FILES tcp_server.hpp server_connection.hpp message.hpp listener.hpp client_connection.hpp
-        message_connection_ops.hpp server_connection.ipp logger.hpp
+INSTALL(FILES tcp_server.hpp server_connection.hpp message.hpp listener.hpp client_connection.hpp logger.hpp message_connection.hpp
         DESTINATION ${CMAKE_INSTALL_PREFIX}/include/avenue)

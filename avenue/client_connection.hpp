@@ -14,8 +14,8 @@ class client_connection : public message_connection {
     boost::asio::ip::tcp::resolver resolver_;
 
 public:
-    client_connection(boost::asio::io_context context,
-                      boost::asio::ssl::context ssl_context);
+    client_connection(boost::asio::io_context &context,
+                      boost::asio::ssl::context &ssl_context);
 
     void run(const std::string &host, const std::string &service);
 

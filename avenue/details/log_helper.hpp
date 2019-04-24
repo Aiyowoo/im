@@ -9,13 +9,13 @@
 #include <string>
 #include <fmt/format.h>
 
-std::string get_extra_log_info() {
+inline std::string get_extra_log_info() {
     return "";
 }
 
-#define DEBUG_LOG(f, ...) do {avenue::get_logger()->debug_log(get_extra_log_info() + " " + fmt::format(f, ##__VA_ARGS__));} while(0)
-#define INFO_LOG(f, ...) do {avenue::get_logger()->info_log(get_extra_log_info() + " " + fmt::format(f, ##__VA_ARGS__));} while(0)
-#define WARN_LOG(f, ...) do {avenue::get_logger()->warn_log(get_extra_log_info() + " " + fmt::format(f, ##__VA_ARGS__));} while(0)
-#define ERROR_LOG(f, ...) do {avenue::get_logger()->error_log(get_extra_log_info() + " " + fmt::format(f, ##__VA_ARGS__));} while(0)
+#define DEBUG_LOG(f, ...) do {avenue::get_logger()->debug_log(get_extra_log_info() + " " + fmt::format(f "\n", ##__VA_ARGS__));} while(0)
+#define INFO_LOG(f, ...) do {avenue::get_logger()->info_log(get_extra_log_info() + " " + fmt::format(f "\n", ##__VA_ARGS__));} while(0)
+#define WARN_LOG(f, ...) do {avenue::get_logger()->warn_log(get_extra_log_info() + " " + fmt::format(f "\n", ##__VA_ARGS__));} while(0)
+#define ERROR_LOG(f, ...) do {avenue::get_logger()->error_log(get_extra_log_info() + " " + fmt::format(f "\n", ##__VA_ARGS__));} while(0)
 
 #endif //AVENUE_LOG_HELPER_HPP
