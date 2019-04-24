@@ -28,6 +28,7 @@ public:
         HALF_CLOSED,
         SEND_MESSAGE_ERROR,
         RECV_MESSAGE_ERROR,
+        CONNECT_FAILED,
         OK = 0
     };
 

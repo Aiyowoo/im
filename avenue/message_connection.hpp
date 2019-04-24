@@ -93,13 +93,13 @@ public:
 
     message_connection &operator=(message_connection &&) = delete;
 
-    ~message_connection();
+    virtual ~message_connection();
 
     /*
      * 建立建立 -> initialize -> on_initialized
      * 只有在on_initialized被调用之后，才能使用该连接发送消息
      */
-    virtual void on_initialized(const status &s);
+    virtual void on_initialized(const status &s) = 0;
 
     /*
      * 收到请求后的处理
@@ -146,6 +146,11 @@ public:
     void close();
 
     void post(std::function<void()> handler);
+
+protected:
+    stream_type &stream() {
+        return stream_;
+    }
 
 private:
 

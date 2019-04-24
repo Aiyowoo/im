@@ -50,26 +50,6 @@ message_connection::~message_connection() {
     }
 }
 
-void message_connection::on_initialized(const status &s) {
-    if (s) {
-        initialized_ = true;
-        read_closed_ = false;
-        write_closed_ = false;
-        want_close_ = false;
-    }
-
-#ifdef DEBUG
-    d_initialized_time_ = get_current_time_str();
-    if (s) {
-        auto addr = stream_.next_layer().local_endpoint();
-        d_local_addr_ = fmt::format("{}:{}", addr.address().to_string(), addr.port());
-        addr = stream_.next_layer().remote_endpoint();
-        d_remote_addr_ = fmt::format("{}:{}", addr.address().to_string(), addr.port());
-    }
-#endif
-}
-
-
 void message_connection::request(message *msg, request_callback_type handler) {
     assert(msg);
     post([this, self = shared_from_this(), msg, handler] {
@@ -308,6 +288,15 @@ void message_connection::initialize() {
         start_receiving_message();
 
         on_initialized(status());
+
+
+#ifdef DEBUG
+        d_initialized_time_ = get_current_time_str();
+        auto addr = stream_.next_layer().local_endpoint();
+        d_local_addr_ = fmt::format("{}:{}", addr.address().to_string(), addr.port());
+        addr = stream_.next_layer().remote_endpoint();
+        d_remote_addr_ = fmt::format("{}:{}", addr.address().to_string(), addr.port());
+#endif
     });
 }
 
