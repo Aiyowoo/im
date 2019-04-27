@@ -31,6 +31,7 @@ void reverse_echo_connection::on_receive_request(avenue::message *msg) {
     std::reverse(body, body + body_len);
     DEBUG_LOG("response with: [{}]", std::string(body, body_len));
 
+    msg->set_is_request(false);
     response(msg);
 }
 

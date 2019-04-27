@@ -129,7 +129,7 @@ void message_connection::do_request(message *msg, std::chrono::system_clock::tim
 void message_connection::do_response(message *msg) {
     assert(msg && !msg->is_request());
 
-    DEBUG_LOG("msg[{}]");
+    DEBUG_LOG("msg[{}][{}]", reinterpret_cast<void*>(msg), *msg);
 
     if (!initialized_ || want_close_ || write_closed_) {
         /*
@@ -273,9 +273,10 @@ void message_connection::handle_read_error(boost::system::error_code ec) {
     }
     request_callbacks_.clear();
 
-    if (write_closed_) {
+    if (write_closed_ || waiting_messages_.empty()) {
         stream_.next_layer().close(ec);
         initialized_ = false;
+        write_closed_ = true;
         on_closed();
     }
 }

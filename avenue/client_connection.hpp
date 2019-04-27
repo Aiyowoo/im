@@ -25,6 +25,8 @@ public:
 
 #ifdef DEBUG
 
+    ~client_connection();
+
     std::string get_extra_log_info() { return ""; }
 
 #endif

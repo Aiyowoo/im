@@ -6,13 +6,13 @@
 #include "logger.hpp"
 
 int main() {
-    try {
+//    try {
         reverse_echo_server server;
         server.run();
         return 0;
-    }
-    catch (const std::exception &e) {
-        ERROR_LOG("encountered an exception[%s]", e.what());
-        return 1;
-    }
+//    }
+//    catch (const std::exception &e) {
+//        ERROR_LOG("encountered an exception[{}]", e.what());
+//        return 1;
+//    }
 }

@@ -19,13 +19,14 @@ void server_connection::run() {
     INFO_LOG("start to run...");
     stream().async_handshake(ssl::stream_base::handshake_type::server,
                              [this, self = shared_from_base()](boost::system::error_code ec) {
-                                 if (!ec) {
-                                     initialize();
+                                 if (ec) {
+                                     status s(ec.value(),
+                                              fmt::format("failed to handshake with client due to error[{}]",
+                                                          ec.message()));
+                                     on_initialized(s);
+                                     return;
                                  }
-                                 status s(ec.value(),
-                                          fmt::format("failed to handshake with client due to error[{}]",
-                                                      ec.message()));
-                                 on_initialized(s);
+                                 initialize();
                              });
 }
 

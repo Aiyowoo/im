@@ -48,9 +48,9 @@ void reverse_echo_client_connection::on_receive_request(avenue::message *msg) {
 }
 
 void reverse_echo_client_connection::on_closed() {
-    DEBUG_LOG("connection[{}] closed");
+    DEBUG_LOG("connection[{}] closed", reinterpret_cast<void*>(this));
 }
 
 reverse_echo_client_connection::~reverse_echo_client_connection() {
-    DEBUG_LOG("connection[{}] destructed");
+    DEBUG_LOG("connection[{}] destructed", reinterpret_cast<void*>(this));
 }

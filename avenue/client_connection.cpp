@@ -57,13 +57,14 @@ void client_connection::run(const std::string &host, const std::string &service)
 void client_connection::on_connected() {
     stream().async_handshake(ssl::stream_base::client,
                              [this, self = shared_from_base()](boost::system::error_code ec) {
-                                 if (!ec) {
-                                     initialize();
+                                 if (ec) {
+                                     status s(ec.value(),
+                                              fmt::format("failed to handshake with server due to error[{}]",
+                                                          ec.message()));
+                                     on_initialized(s);
+                                     return;
                                  }
-                                 status s(ec.value(),
-                                          fmt::format("failed to handshake with server due to error[{}]",
-                                                      ec.message()));
-                                 on_initialized(s);
+                                 initialize();
                              });
 }
 
@@ -71,5 +72,13 @@ void client_connection::on_connected() {
 std::shared_ptr<client_connection> client_connection::shared_from_base() {
     return std::dynamic_pointer_cast<client_connection>(shared_from_this());
 }
+
+#ifdef DEBUG
+
+client_connection::~client_connection() {
+    DEBUG_LOG("client_connection[{}] destructed", reinterpret_cast<void *>(this));
+}
+
+#endif
 
 }

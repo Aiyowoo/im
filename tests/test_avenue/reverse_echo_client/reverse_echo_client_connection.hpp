@@ -18,7 +18,7 @@ public:
 
     void on_closed() override;
 
-    ~reverse_echo_client_connection();
+    ~reverse_echo_client_connection() override;
 };
 
 
