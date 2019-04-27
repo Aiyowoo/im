@@ -47,7 +47,7 @@ void client_connection::run(const std::string& host, const std::string& service)
 				                                            return;
 			                                            }
 
-			                                            DEBUG_LOG("client_connection[{}] connect to {}:{} {}:{}",
+			                                            DEBUG_LOG("client_connection[{}] connect to {}:{} {}:{}", reinterpret_cast<void*>(this),
 				                                            host_name_, service_name_,ep.address().to_string(),ep.port()
 			                                            );
 

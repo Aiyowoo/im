@@ -17,6 +17,9 @@ reverse_echo_client_connection::reverse_echo_client_connection(boost::asio::io_c
 void reverse_echo_client_connection::on_initialized(const status &s) {
     DEBUG_LOG("connection[{}] initialized, result code[{}] message[{}]",
               reinterpret_cast<void *>(this), s.code(), s.message());
+    if(!s) {
+		return;
+    }
 
     auto *msg = new avenue::message(1, 2, 3);
     std::string data = "hello world";
