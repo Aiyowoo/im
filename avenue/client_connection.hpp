@@ -9,28 +9,30 @@
 
 namespace avenue {
 
-class client_connection : public message_connection {
+	class client_connection : public message_connection {
 
-    boost::asio::ip::tcp::resolver resolver_;
+		std::string host_name_;
+		std::string service_name_;
+		boost::asio::ip::tcp::resolver resolver_;
 
-public:
-    client_connection(boost::asio::io_context &context,
-                      boost::asio::ssl::context &ssl_context);
+	public:
+		client_connection(boost::asio::io_context& context,
+		                  boost::asio::ssl::context& ssl_context);
 
-    void run(const std::string &host, const std::string &service);
+		void run(const std::string& host, const std::string& service);
 
-    std::shared_ptr<client_connection> shared_from_base();
+		std::shared_ptr<client_connection> shared_from_base();
 
-    void on_connected();
+		void on_connected();
 
 #ifdef DEBUG
 
-    ~client_connection();
+		~client_connection();
 
-    std::string get_extra_log_info() { return ""; }
+		std::string get_extra_log_info() { return ""; }
 
 #endif
-};
+	};
 
 }
 
