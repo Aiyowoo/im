@@ -11,7 +11,11 @@ INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES($ENV{IM_INSTALL_PATH}/include)
 LINK_DIRECTORIES($ENV{IM_INSTALL_PATH}/lib/comm)
 
+IF(WIN32)
+
 ADD_DEFINITIONS(/DDEBUG)
+
+ENDIF(WIN32)
 
 ADD_LIBRARY(avenue message.cpp message.hpp tcp_server.cpp tcp_server.hpp
             listener.cpp listener.hpp

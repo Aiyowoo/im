@@ -5,6 +5,9 @@
 #include "client_connection.hpp"
 #include "details/log_helper.hpp"
 
+#include "common.hpp"
+#include "message.hpp"
+
 namespace asio = boost::asio;
 namespace ssl = boost::asio::ssl;
 using tcp = asio::ip::tcp;
@@ -67,9 +70,22 @@ void client_connection::on_connected() {
 			                         return;
 		                         }
 		                         initialize();
+								 start_heart_beat();
 	                         });
 }
 
+void client_connection::start_heart_beat() {
+	message* msg = new avenue::message(HEART_BEAT_SERVICE_ID, HEART_BEAT_MESSAGE_ID, 0);
+	timed_request(msg, std::chrono::seconds(HEART_BEAT_TIMEOUT_SECONDS), [this, self = shared_from_base()](message* msg, const status& s) {
+		if (!s) {
+			ERROR_LOG("connection[{}] heart beat timeout, connection close...", reinterpret_cast<void*>(this));
+			close();
+			return;
+		}
+		assert(msg && !msg->is_request);
+		start_heart_beat();
+	});
+}
 
 std::shared_ptr<client_connection> client_connection::shared_from_base() {
 	return std::dynamic_pointer_cast<client_connection>(shared_from_this());

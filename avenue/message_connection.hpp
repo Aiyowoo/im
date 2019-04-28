@@ -77,6 +77,11 @@ class message_connection : public std::enable_shared_from_this<message_connectio
 	/* receive_message */
 	message* recv_message_;
 
+	/*
+	 * 请求的序列号，让上层不用关心消息的该字段
+	 */
+	uint32_t sequence_;
+
 public:
 
 	message_connection(boost::asio::ip::tcp::socket& socket, boost::asio::ssl::context& ssl_context);
@@ -84,7 +89,7 @@ public:
 	message_connection(boost::asio::io_context& io_context, boost::asio::ssl::context& ssl_context);
 
 	/*
-	 * 都是使用shared_ptr封装后访问，不需要移动
+	 * 都是使用shared_ptr封装后访问，不需要拷贝或移动
 	 */
 	message_connection(const message_connection&) = delete;
 
@@ -147,6 +152,9 @@ public:
 	void close();
 
 	void post(std::function<void()> handler);
+
+public:
+	uint32_t allocate_sequence();
 
 protected:
 	stream_type& stream() {

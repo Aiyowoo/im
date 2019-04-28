@@ -27,7 +27,7 @@ message_connection::message_connection(boost::asio::ip::tcp::socket& socket,
                                        boost::asio::ssl::context& ssl_context)
 	: stream_(std::move(socket), ssl_context), initialized_(false), read_closed_(true),
 	  write_closed_(true), want_close_(false), request_timer_(stream_.get_io_context()),
-	  recv_message_(nullptr) {
+	  recv_message_(nullptr), sequence_(0) {
 #ifdef DEBUG
 	d_create_time_ = get_current_time_str();
 #endif
@@ -37,7 +37,7 @@ message_connection::message_connection(boost::asio::io_context& io_context,
                                        boost::asio::ssl::context& ssl_context)
 	: stream_(io_context, ssl_context), initialized_(false), read_closed_(true),
 	  write_closed_(true), want_close_(false), request_timer_(stream_.get_io_context()),
-	  recv_message_(nullptr) {
+	  recv_message_(nullptr), sequence_(0) {
 #ifdef DEBUG
 	d_create_time_ = get_current_time_str();
 #endif
@@ -84,6 +84,10 @@ void message_connection::post(std::function<void()> handler) {
 	stream_.get_io_context().post(handler);
 }
 
+uint32_t message_connection::allocate_sequence() {
+	return ++sequence_;
+}
+
 void message_connection::do_request(message* msg, request_callback_type handler) {
 	assert(msg && msg->is_request());
 
@@ -94,8 +98,8 @@ void message_connection::do_request(message* msg, request_callback_type handler)
 		handler(nullptr, s);
 		return;
 	}
-
-	uint32_t seq = msg->get_sequence();
+	uint32_t seq = allocate_sequence();
+	msg->set_sequence(seq);
 	assert(request_callbacks_.find(seq) == request_callbacks_.cend());
 	request_callbacks_.insert({seq, handler});
 
@@ -114,7 +118,8 @@ void message_connection::do_request(message* msg, std::chrono::system_clock::tim
 		return;
 	}
 
-	uint32_t seq = msg->get_sequence();
+	uint32_t seq = allocate_sequence();
+	msg->set_sequence(seq);
 	assert(request_callbacks_.find(seq) == request_callbacks_.cend());
 	request_callbacks_.insert({seq, handler});
 
@@ -152,6 +157,7 @@ void message_connection::do_close() {
 	if (!write_closed_ && waiting_messages_.empty()) {
 		boost::system::error_code ec;
 		stream_.next_layer().shutdown(asio::ip::tcp::socket::shutdown_send, ec);
+		write_closed_ = true;
 		if (ec) {
 			ERROR_LOG("failed to close socket write due to error[{}]", ec.message());
 		}

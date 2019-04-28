@@ -25,7 +25,12 @@ namespace avenue {
 
 		void on_connected();
 
+		void start_heart_beat();
+
 #ifdef DEBUG
+		/*
+		* 调试用信息
+		*/
 
 		~client_connection();
 
