@@ -21,7 +21,7 @@ void reverse_echo_client_connection::on_initialized(const status &s) {
 		return;
     }
 
-    auto *msg = new avenue::message(1, 2, 3);
+    auto *msg = new avenue::message(1, 2);
     std::string data = "hello world";
     msg->prepare(data.size());
     char *body = nullptr;

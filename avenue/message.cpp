@@ -15,13 +15,13 @@
 
 namespace avenue {
 
-message::message() : message(static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), 0) {}
+message::message() : message(static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)) {}
 
-message::message(uint32_t service_id, uint32_t message_id, uint32_t sequence) {
+message::message(uint32_t service_id, uint32_t message_id) {
     set_service_id(service_id);
     set_message_id(message_id);
     set_is_request(false);
-    set_sequence(sequence);
+    set_sequence(0);
     set_options(0);
     set_body_len(0);
     data_ = nullptr;

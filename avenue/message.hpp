@@ -59,7 +59,7 @@ class message : boost::noncopyable {
 public:
     message();
 
-    message(uint32_t service_id, uint32_t message_id, uint32_t sequence);
+    message(uint32_t service_id, uint32_t message_id);
 
     message(const message &&) = delete;
 

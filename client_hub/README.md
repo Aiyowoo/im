@@ -1,0 +1,4 @@
+### client_hub
+客户端启动后与client_hub建立长连接，
+来自客户端的消息将通过client_hub转发到msg_server去处理，
+同时将msg_server的响应发送给正确的客户端。

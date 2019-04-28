@@ -36,7 +36,7 @@ void multi_request_connection::send_info() {
 		return;
 	}
 
-	avenue::message *msg = new avenue::message(123, 321, std::distance(datas_.cbegin(), it_));
+	avenue::message *msg = new avenue::message(123, 321);
 	msg->set_is_request(true);
 	msg->prepare(it_->size());
 	char *body = nullptr;

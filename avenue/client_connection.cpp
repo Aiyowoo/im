@@ -75,14 +75,17 @@ void client_connection::on_connected() {
 }
 
 void client_connection::start_heart_beat() {
-	message* msg = new avenue::message(HEART_BEAT_SERVICE_ID, HEART_BEAT_MESSAGE_ID, 0);
+	message* msg = new avenue::message(HEART_BEAT_SERVICE_ID, HEART_BEAT_MESSAGE_ID);
+	msg->set_is_request(true);
 	timed_request(msg, std::chrono::seconds(HEART_BEAT_TIMEOUT_SECONDS), [this, self = shared_from_base()](message* msg, const status& s) {
 		if (!s) {
 			ERROR_LOG("connection[{}] heart beat timeout, connection close...", reinterpret_cast<void*>(this));
 			close();
 			return;
 		}
-		assert(msg && !msg->is_request);
+		assert(msg && !msg->is_request());
+		delete msg;
+
 		start_heart_beat();
 	});
 }

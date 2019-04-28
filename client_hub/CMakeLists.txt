@@ -1,0 +1,11 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
+
+PROJECT(client_hub CXX)
+
+FIND_PACKAGE(Boost REQUIRED)
+FIND_PACKAGE(fmt REQUIRED)
+FIND_PACKAGE(OpenSSL REQUIRED)
+
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS} $ENV{IM_INSTALL_PATH}/include)
+
+ADD_EXECUTABLE(client_hub main.cpp client_connection.cpp client_connection.hpp)
