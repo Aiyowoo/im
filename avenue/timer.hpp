@@ -8,14 +8,10 @@
 #include <queue>
 #include <chrono>
 #include <functional>
+#include <vector>
 
 namespace avenue {
 
-/*
- * 使用时，需保证在timer析构之前，所有的回调均已进行
- * 因为并不知道，什么时候timer的回调会被调用
- * 所以一定在async_wait时，对象没有被析构
- */
 class timer {
 public:
 	using timer_id_type = uint32_t;
@@ -41,6 +37,15 @@ private:
 	std::map<timer_id_type, callback_type> callbacks_;
 
 	timer_id_type next_timer_id_;
+
+	/*
+	 * 在async_wait结束后需要执行的操作
+	 * 内部使用，只能包含两种操作：
+	 * 1、do_cancel
+	 * 2、do_cancel_all
+	 */
+	using func_type = std::function<void()>;
+	std::vector<func_type> todos_;
 
 public:
 
@@ -69,6 +74,16 @@ public:
 	 * 取消所有在等待的操作
 	 */
 	void cancel_all();
+
+	/*
+	 * 实际取消某个操作
+	 */
+	void do_cancel(timer_id_type timer_id);
+
+	/*
+	 * 实际取消所有操作
+	 */
+	void do_cancel_all();
 
 private:
 	timer_id_type allocate_timer_id();

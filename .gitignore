@@ -33,6 +33,7 @@
 
 # Visual Studio
 .vs
+CMakeSettings.json
 
 # clion
 .idea

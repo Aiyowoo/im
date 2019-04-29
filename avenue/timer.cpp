@@ -3,6 +3,15 @@
 
 namespace avenue {
 
+/*
+ * 这个版本的实现：
+ * 用户使用时，使用用户提供的callbacks来保证timer对象不被析构，
+ * 但是当do_cancel_all或cancel_all之后，timer对象中并没有保存任何callback，
+ * 此时timer对象可能已经被析构；
+ * 即在start_timing的async_wait回调中，do_cancel_all之后继续执行可能崩溃
+ */
+
+
 timer::timer(boost::asio::io_context& context)
 : timer_(context), next_timer_id_(1) {}
 
@@ -28,26 +37,64 @@ timer::timer_id_type timer::wait(clock_type::duration d, const callback_type& ca
 }
 
 void timer::cancel(timer_id_type timer_id) {
+	/*
+	 * 在一个操作取消后，如果没有其他等待操作，则该timer可能被析构了，
+	 * 所以需要注意取消timer async_wait
+	 */
 	auto it = callbacks_.find(timer_id);
 	if (it == callbacks_.cend()) {
-		DEBUG_LOG("timer[{}] id[{}] already finished", reinterpret_cast<void*>(this), timer_id);
+		DEBUG_LOG("timer_id[{}] not found, may already finished", timer_id);
 		return;
 	}
 
-	auto handler = it->second;
-	callbacks_.erase(it);
-	status cancelled(status::OPERATION_CANCELLED, "operation has been cancelled");
-	handler(cancelled);
+	todos_.push_back([this, timer_id] {
+		do_cancel(timer_id);
+		});
+	if (todos_.size() > 1) {
+		// cancel alreay invoked
+		return;
+	}
+
+	restart_timing();
 }
 
 void timer::cancel_all() {
+	if (callbacks_.empty()) {
+		// nothing need to do
+		return;
+	}
+
+	bool have_cancelled = !todos_.empty();
+	todos_.clear();
+	todos_.push_back([this] {
+		do_cancel_all();
+		});
+	if (have_cancelled) {
+		// async_wait already cancelled
+		return;
+	}
+	
+	restart_timing();
+}
+
+void timer::do_cancel(timer_id_type timer_id) {
+	auto it = callbacks_.find(timer_id);
+	if(it == callbacks_.cend()) {
+		return;
+	}
+	status cancelled(status::OPERATION_CANCELLED, "operation has beed cancelled");
+	auto handler = it->second;
+	callbacks_.erase(it);
+	handler(cancelled);
+}
+
+void timer::do_cancel_all() {
 	status cancelled(status::OPERATION_CANCELLED, "operation has been cancelled");
 	for (const auto& p : callbacks_) {
-		p.second(cancelled);
+		auto handler = p.second;
+		handler(cancelled);
 	}
-	cancelled.clear();
-	boost::system::error_code ec;
-	timer_.cancel(ec);
+	callbacks_.clear();
 }
 
 timer::timer_id_type timer::allocate_timer_id() {
@@ -85,16 +132,24 @@ void timer::start_timing() {
 		return;
 	}
 
-	// fixme: 应该不会抛出错误
+	// fixme: 应该不会抛出异常
 	timer_.expires_at(deadline);
 	timer_.async_wait([this](boost::system::error_code ec) {
+		/*
+		 * 执行todos
+		 */
+		for (auto func : todos_) {
+			func();
+		}
+		todos_.clear();
+
 		if (ec == boost::asio::error::operation_aborted) {
 			start_timing();
 			return;
 		}
 		if (ec) {
 			ERROR_LOG("timer[{}] encountered an error[{}]", reinterpret_cast<void*>(this), ec.message());
-			cancel_all();
+			do_cancel_all();
 			return;
 		}
 			
