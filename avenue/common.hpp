@@ -16,4 +16,9 @@ constexpr uint32_t HEART_BEAT_MESSAGE_ID = 0;
  */
 constexpr uint32_t HEART_BEAT_TIMEOUT_SECONDS = 2;
 
+/*
+ * heart beat interval
+ */
+constexpr uint32_t HEART_BEAT_INTERVAL_SECONDS = 2;
+
 #endif

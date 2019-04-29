@@ -9,10 +9,11 @@
 #include <chrono>
 #include <functional>
 #include <vector>
+#include <memory>
 
 namespace avenue {
 
-class timer {
+class timer: public std::enable_shared_from_this<timer> {
 public:
 	using timer_id_type = uint32_t;
 	using clock_type = std::chrono::system_clock;
@@ -38,15 +39,6 @@ private:
 
 	timer_id_type next_timer_id_;
 
-	/*
-	 * 在async_wait结束后需要执行的操作
-	 * 内部使用，只能包含两种操作：
-	 * 1、do_cancel
-	 * 2、do_cancel_all
-	 */
-	using func_type = std::function<void()>;
-	std::vector<func_type> todos_;
-
 public:
 
 	explicit timer(boost::asio::io_context& context);
@@ -66,6 +58,11 @@ public:
 	timer_id_type wait(clock_type::duration d, const callback_type& callback);
 
 	/*
+	 * 当超过某个时间点后，执行callback
+	 */
+	timer_id_type wait(clock_type::time_point time, const callback_type& callback);
+
+	/*
 	 * 取消某次等待操作
 	 */
 	void cancel(timer_id_type timer_id);
@@ -76,12 +73,12 @@ public:
 	void cancel_all();
 
 	/*
-	 * 实际取消某个操作
+	 * 取消某个操作
 	 */
 	void do_cancel(timer_id_type timer_id);
 
 	/*
-	 * 实际取消所有操作
+	 * 只取消所有在等待的操作，不管timer_是否结束
 	 */
 	void do_cancel_all();
 
@@ -91,7 +88,15 @@ private:
 	void restart_timing();
 
 	void start_timing();
+
+	template<typename T>
+	void post(T&& t);
 };
+
+template<typename T>
+inline void timer::post(T&& t) {
+	timer_.get_io_context().post(t);
+}
 
 }
 

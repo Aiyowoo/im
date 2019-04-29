@@ -5,6 +5,8 @@
 #ifndef AVENUE_MESSAGE_CONNECTION_HPP
 #define AVENUE_MESSAGE_CONNECTION_HPP
 
+#include "timer.hpp"
+
 #include <comm/status.hpp>
 
 #include <memory>
@@ -58,21 +60,27 @@ class message_connection : public std::enable_shared_from_this<message_connectio
 	bool want_close_;
 
 	/* 消息相关 */
+
+	/*
+	 * 等待发送出去的消息列表
+	 */
 	std::list<message *> waiting_messages_;
+
+	/*
+	 * request_id -> request callback
+	 */
 	std::map<uint32_t, request_callback_type> request_callbacks_;
 
-	struct deadline_request_id_p {
-		clock_type::time_point deadline;
-		uint32_t request_id;
-	};
+	/*
+	 * request_id -> timer_id
+	 * 用来在某个请求已完成时，从timer_取消操作
+	 */
+	std::map<uint32_t, timer::timer_id_type> request_id_to_timer_id_;
 
-	struct deadline_request_id_p_comp {
-		bool operator()(const deadline_request_id_p& lhs, const deadline_request_id_p& rhs) const;
-	};
-
-	deadline_heap_type deadline_heap_;
-
-	boost::asio::system_timer request_timer_;
+	/*
+	 * 定时器
+	 */
+	std::shared_ptr<timer> timer_;
 
 	/* receive_message */
 	message* recv_message_;
@@ -156,6 +164,11 @@ public:
 public:
 	uint32_t allocate_sequence();
 
+	/*
+	 * 当request_id超时时，进行处理 
+	 */
+	void on_request_timeout(uint32_t request_id, status s);
+
 protected:
 	stream_type& stream() {
 		return stream_;
@@ -216,9 +229,9 @@ private:
 	void handle_response(message* msg);
 
 	/*
-	 * 对请求进行计时
+	 * 当read_closed_和write_closed_后，释放所有资源
 	 */
-	void start_timing();
+	void clear_all();
 
 #ifdef DEBUG
 	/*

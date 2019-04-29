@@ -10,6 +10,7 @@
 #include "logger.hpp"
 #include "core_dumper.hpp"
 #include "multi_request_connection.hpp"
+#include "ignore_request_connection.hpp"
 
 #include <comm/status.hpp>
 #include <avenue/message.hpp>
@@ -99,19 +100,31 @@ TEST(reverse_echo_client, one_connection_multi_requests) {
 /*
  * 测试多个连接多个请求
  */
-TEST(reverse_echo_client, multi_connection_multi_requests) {
+//TEST(reverse_echo_client, multi_connection_multi_requests) {
+//	boost::asio::io_context context;
+//	boost::asio::ssl::context ssl_context(ssl::context::sslv23);
+//	ssl_context.set_verify_mode(ssl::verify_none);
+//	std::vector<std::string> strs = {
+//		"hello world",
+//		"nice to meet you!",
+//		"how are you",
+//		"this is an apple",
+//		"thank you"
+//	};
+//	for(int i = 0; i < 100; ++i) {
+//		auto conn_ptr = std::make_shared<multi_request_connection>(context, ssl_context, strs);
+//		conn_ptr->run("127.0.0.1", "54321");
+//	}
+//	context.run();
+//}
+
+TEST(reverse_echo_client, request_timeout) {
 	boost::asio::io_context context;
 	boost::asio::ssl::context ssl_context(ssl::context::sslv23);
 	ssl_context.set_verify_mode(ssl::verify_none);
-	std::vector<std::string> strs = {
-		"hello world",
-		"nice to meet you!",
-		"how are you",
-		"this is an apple",
-		"thank you"
-	};
-	for(int i = 0; i < 100; ++i) {
-		auto conn_ptr = std::make_shared<multi_request_connection>(context, ssl_context, strs);
+
+	{
+		auto conn_ptr = std::make_shared<ignore_request_connection>(context, ssl_context);
 		conn_ptr->run("127.0.0.1", "54321");
 	}
 	context.run();

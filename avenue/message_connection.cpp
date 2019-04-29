@@ -17,16 +17,10 @@ namespace asio = boost::asio;
 
 namespace avenue {
 
-bool message_connection::deadline_request_id_p_comp::operator()(const message_connection::deadline_request_id_p& lhs,
-                                                                const message_connection::deadline_request_id_p& rhs)
-const {
-	return lhs.deadline > rhs.deadline || (lhs.deadline == rhs.deadline && lhs.request_id > rhs.request_id);
-}
-
 message_connection::message_connection(boost::asio::ip::tcp::socket& socket,
                                        boost::asio::ssl::context& ssl_context)
 	: stream_(std::move(socket), ssl_context), initialized_(false), read_closed_(true),
-	  write_closed_(true), want_close_(false), request_timer_(stream_.get_io_context()),
+	  write_closed_(true), want_close_(false), timer_(std::make_shared<timer>(stream_.get_io_context())),
 	  recv_message_(nullptr), sequence_(0) {
 #ifdef DEBUG
 	d_create_time_ = get_current_time_str();
@@ -36,7 +30,7 @@ message_connection::message_connection(boost::asio::ip::tcp::socket& socket,
 message_connection::message_connection(boost::asio::io_context& io_context,
                                        boost::asio::ssl::context& ssl_context)
 	: stream_(io_context, ssl_context), initialized_(false), read_closed_(true),
-	  write_closed_(true), want_close_(false), request_timer_(stream_.get_io_context()),
+	  write_closed_(true), want_close_(false), timer_(std::make_shared<timer>(stream_.get_io_context())),
 	  recv_message_(nullptr), sequence_(0) {
 #ifdef DEBUG
 	d_create_time_ = get_current_time_str();
@@ -88,6 +82,26 @@ uint32_t message_connection::allocate_sequence() {
 	return ++sequence_;
 }
 
+void avenue::message_connection::on_request_timeout(uint32_t request_id, status s) {
+	if (s.code() == status::OPERATION_CANCELLED) {
+		return;
+	}
+
+	// fixme: 超时返回其他错误
+	assert(s);
+	auto it = request_callbacks_.find(request_id);
+	if (it == request_callbacks_.cend()) {
+		return;
+	}
+
+	auto handler = it->second;
+	request_callbacks_.erase(it);
+	s.assign(status::TIMEOUT, "request timeout");
+	if (handler) {
+		handler(nullptr, s);
+	}
+}
+
 void message_connection::do_request(message* msg, request_callback_type handler) {
 	assert(msg && msg->is_request());
 
@@ -123,11 +137,11 @@ void message_connection::do_request(message* msg, std::chrono::system_clock::tim
 	assert(request_callbacks_.find(seq) == request_callbacks_.cend());
 	request_callbacks_.insert({seq, handler});
 
-	deadline_heap_.push(deadline_request_id_p{deadline, seq});
-	if (deadline_heap_.size() == 1) {
-		INFO_LOG("start timing...");
-		start_timing();
-	}
+	auto timer_id = timer_->wait(deadline, [this, self = shared_from_this(), seq](const status &s) {
+		on_request_timeout(seq, s);
+		});
+	assert(request_id_to_timer_id_.find(seq) == request_id_to_timer_id_.cend());
+	request_id_to_timer_id_[seq] = timer_id;
 
 	send_message(msg);
 }
@@ -192,7 +206,8 @@ void message_connection::do_send_message() {
 
 		if (want_close_) {
 			boost::system::error_code ec;
-			stream_.next_layer().close(ec);
+			stream_.next_layer().shutdown(boost::asio::socket_base::shutdown_send, ec);
+			write_closed_ = true;
 			INFO_LOG("all messages sent, close write end with result[{}]", ec.message());
 		}
 
@@ -262,8 +277,7 @@ void message_connection::handle_write_error(boost::system::error_code ec) {
 
 	if (read_closed_) {
 		// 整个连接都关闭了
-		stream_.next_layer().close(ec);
-		initialized_ = false;
+		clear_all();
 		on_closed();
 	}
 }
@@ -272,7 +286,7 @@ void message_connection::handle_read_error(boost::system::error_code ec) {
 	WARN_LOG("when receive message, encountered an error[{}]", ec.message());
 	read_closed_ = true;
 
-	// 将所有的request都设置为失败，因为不会再有请求了
+	// 将所有的request都设置为失败，因为不会再有响应了
 	status recv_error(status::RECV_MESSAGE_ERROR, "failed to recv messages");
 	for (const auto& p : request_callbacks_) {
 		if (p.second) {
@@ -282,9 +296,7 @@ void message_connection::handle_read_error(boost::system::error_code ec) {
 	request_callbacks_.clear();
 
 	if (write_closed_ || waiting_messages_.empty()) {
-		stream_.next_layer().close(ec);
-		initialized_ = false;
-		write_closed_ = true;
+		clear_all();
 		on_closed();
 	}
 }
@@ -388,66 +400,33 @@ void message_connection::handle_response(message* msg) {
 		// 不关心请求结果
 		delete msg;
 	}
+
+	// 取消计时，如果有的话
+	auto timer_id_it = request_id_to_timer_id_.find(seq);
+	if (timer_id_it != request_id_to_timer_id_.cend()) {
+		timer::timer_id_type timer_id = timer_id_it->second;
+		request_id_to_timer_id_.erase(timer_id_it);
+		timer_->cancel(timer_id);
+	}
 }
 
-void message_connection::start_timing() {
-	if (deadline_heap_.empty()) {
-		INFO_LOG("no need to timing, stop...");
-		return;
-	}
-
-	while (!deadline_heap_.empty()) {
-		// 跳过已经完成的
-		uint32_t request_id = deadline_heap_.top().request_id;
-		if (request_callbacks_.find(request_id) != request_callbacks_.end()) {
-			break;
-		}
-		deadline_heap_.pop();
-	}
-
-	deadline_request_id_p p = deadline_heap_.top();
-	request_timer_.expires_at(p.deadline);
-	request_timer_.async_wait([this, self = shared_from_this()](boost::system::error_code ec) {
-		if (ec && !(want_close_ && ec == asio::error::operation_aborted)) {
-			ERROR_LOG("timer encountered an error[{}]", ec.message());
-			return;
-		}
-
-		status timeout_error(status::TIMEOUT, "request timeout");
-		auto now = clock_type::now();
-		while (!deadline_heap_.empty()) {
-			deadline_request_id_p p = deadline_heap_.top();
-			if (p.deadline > now) {
-				break;
-			}
-
-			deadline_heap_.pop();
-			auto it = request_callbacks_.find(p.request_id);
-			if (it == request_callbacks_.end()) {
-				continue;
-			}
-
-			auto handler = it->second;
-			request_callbacks_.erase(it);
-			if (handler) {
-				handler(nullptr, timeout_error);
-			}
-
-#ifdef DEBUG
-			++d_timeout_request_count_;
-#endif
-		}
-	});
+void avenue::message_connection::clear_all() {
+	initialized_ = false;
+	boost::system::error_code ec;
+	stream_.next_layer().close(ec);
+	read_closed_ = true;
+	write_closed_ = true;
+	timer_->cancel_all();
 }
 
 #ifdef DEBUG
 
 std::string message_connection::get_extra_log_info() {
-	return fmt::format("create_time[{}] initialized_time[{}] local_addr[{}] remote_addr[{}] "
+	return fmt::format("connecton[{}] create_time[{}] initialized_time[{}] local_addr[{}] remote_addr[{}] "
 	                   "sent_request_count[{}] received_response_count[{}] received_request_count[{}] "
 	                   "sent_response_count[{}] timeout_request_count[{}] initialized[{}] "
 	                   "read_closed[{}] write_closed[{}] want_close_write[{}] waiting_send_messages_count[{}]",
-	                   d_create_time_, d_initialized_time_, d_local_addr_, d_remote_addr_,
+	                   reinterpret_cast<void*>(this), d_create_time_, d_initialized_time_, d_local_addr_, d_remote_addr_,
 	                   d_sent_request_count_, d_received_response_count_, d_received_request_count_,
 	                   d_sent_response_count_, d_timeout_request_count_, initialized_, read_closed_,
 	                   write_closed_, want_close_, waiting_messages_.size());
