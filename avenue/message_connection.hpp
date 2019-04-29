@@ -30,7 +30,7 @@ class message;
 class message_connection : public std::enable_shared_from_this<message_connection> {
 	using stream_type = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
 	using request_callback_type = std::function<void(message*, const status& s)>;
-	using clock_type = std::chrono::system_clock;
+	using clock_type = timer::clock_type;
 
 	struct deadline_request_id_p;
 	struct deadline_request_id_p_comp;
@@ -160,6 +160,15 @@ public:
 	void close();
 
 	void post(std::function<void()> handler);
+
+protected:
+	/*
+	 * 这两个wait函数只能在connection io_context的线程内调用，
+	 * 否则会造成竞争，限制仅在connection内部使用
+	 */
+	timer::timer_id_type wait(timer::clock_type::duration d, const timer::callback_type &callback);
+
+	timer::timer_id_type wait(timer::clock_type::time_point time, const timer::callback_type &callback);
 
 public:
 	uint32_t allocate_sequence();

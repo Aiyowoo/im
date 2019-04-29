@@ -85,8 +85,22 @@ void client_connection::start_heart_beat() {
 		}
 		assert(msg && !msg->is_request());
 		delete msg;
+		/*
+		 * 延迟HEART_BEAT_INTERVAL_SECONDS后，在发送心跳
+		 */
+		wait(std::chrono::seconds(HEART_BEAT_INTERVAL_SECONDS), [this, self=shared_from_base()] (const status &s) {
+			if(s.code() == status::OPERATION_CANCELLED) {
+				DEBUG_LOG("conn[{}] operation cancelled, nothing need to do ...", reinterpret_cast<void*>(this));
+				return;
+			}
+			if(!s) {
+				ERROR_LOG("conn[{}] fatal error, error[{}][{}]", reinterpret_cast<void*>(this),
+					s.code(), s.message());
+				return;
+			}
 
-		start_heart_beat();
+			start_heart_beat();
+		});
 	});
 }
 

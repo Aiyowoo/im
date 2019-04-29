@@ -4,9 +4,9 @@
 namespace avenue {
 
 /*
- * 只能以shared_ptr形式使用，避免内存泄露
+ * 1、以shared_ptr形式使用，避免内存泄露（现在采用这种方式实现）
+ * 2、将callback以post的形式抛出去执行，这样也可以避免内存泄漏
  */
-
 
 timer::timer(boost::asio::io_context& context)
 : timer_(context), next_timer_id_(1) {}

@@ -8,7 +8,6 @@
 #include <queue>
 #include <chrono>
 #include <functional>
-#include <vector>
 #include <memory>
 
 namespace avenue {

@@ -17,3 +17,4 @@ LINK_DIRECTORIES(${GTEST_LIBRARY_DIRS})
 
 ADD_SUBDIRECTORY(reverse_echo_server)
 ADD_SUBDIRECTORY(reverse_echo_client)
+ADD_SUBDIRECTORY(test_timer)

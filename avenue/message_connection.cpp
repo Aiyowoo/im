@@ -74,6 +74,16 @@ void message_connection::close() {
 	});
 }
 
+timer::timer_id_type message_connection::wait(timer::clock_type::duration d, const timer::callback_type& callback) {
+	timer::clock_type::time_point invoke_time = clock_type::now() + d;
+	return wait(invoke_time, callback);
+}
+
+timer::timer_id_type message_connection::
+wait(timer::clock_type::time_point time, const timer::callback_type& callback) {
+	return timer_->wait(time, callback);
+}
+
 void message_connection::post(std::function<void()> handler) {
 	stream_.get_io_context().post(handler);
 }
@@ -82,7 +92,7 @@ uint32_t message_connection::allocate_sequence() {
 	return ++sequence_;
 }
 
-void avenue::message_connection::on_request_timeout(uint32_t request_id, status s) {
+void message_connection::on_request_timeout(uint32_t request_id, status s) {
 	if (s.code() == status::OPERATION_CANCELLED) {
 		return;
 	}
