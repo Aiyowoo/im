@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package im.base;
+
+enum services {
+	SID_DISPATCH		= 0;
+	SID_LOGIN			= 1;
+	SID_USER			= 2;
+	SID_BUDDY			= 3;
+	SID_MSG				= 4;
+	SID_GROUP			= 5;
+	SID_FILE			= 6;
+}
+
+enum dispatch_messages {
+	MID_GET_MESSAGE_SERVERS		= 0;
+}
+
+/*
+ * 请求结果
+ */
+message result {
+	int32		code			= 1;
+	string		message			= 2;
+}
+
+/*
+ * 用户相关操作
+ */
+enum user_messages {
+	MID_LOGIN					= 0;	// 用户登录
+	MID_LOGOUT					= 1;	// 用户退出
+	MID_KICK_DEVICE				= 2;	// 退出在某个设备上的登录
+	MID_QUERY_SELF_INFO			= 3;	// 请求本用户信息
+	MID_QUERY_USER_INFO			= 4;	// 请求其他用户信息
+	MID_UPDATE_AVATAR			= 5;	// 更新头像
+	MID_UPDATE_SIGN_INFO		= 6;	// 修改个性签名
+	MID_CHANGE_STATUS			= 7;	// 修改状态（在线、离线等）
+}
+
+enum user_status {
+	USER_ONLINE			= 0;
+	USER_OFFLINE		= 1;
+	USER_LEAVE			= 2;
+}
+
+enum client_type {
+	WINDOWS				= 0;
+	MAC					= 1;
+	IOS					= 2;
+	ANDROID				= 3;
+}
+
+/*
+ * 聊天消息相关操作
+ */
+enum chat_messages {
+	MID_SEND_MESSAGE						= 0;
+	MID_SEND_GROUP_MESSAGE					= 1;
+	MID_MESSAGE_ACK							= 2;	// 确认某个聊天消息
+	MID_MESSAGE_READ_ACK					= 3;
+	MID_MESSAGE_READ_NOTIFY					= 4;
+
+	/* 操作相关 */
+	CID_MESSAGE_TIME_REQUEST				= 5;
+	CID_QUERY_UNREAD_MESSAGE_INFO			= 6;
+	CID_QUERY_UNREAD_MESSAGES				= 7;
+	CID_QUERY_GROUP_UNREAD_MESSAGE_INFO		= 8;
+}
+
+/*
+ *	好友相关请求
+ */
+enum buddy_messages {
+	MID_QUERY_BUDDY_LIST		= 0;	// 获取好友列表
+}
+
+enum group_messages {
+	MID_QUERY_GROUP_INFO		= 0;	// 查询组信息
+	MID_QUERY_GROUP_MEMBERS		= 1;	// 查询组内成员信息
+}

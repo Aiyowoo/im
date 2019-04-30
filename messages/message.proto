@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package message;
+
+import "base.proto";
+
+/*
+ * 消息相关操作
+ */
+
+/*
+ * 消息类型：
+ * 用户消息
+ * 群消息
+ */
+enum session_type {
+	USER_MESSAGE			= 0;
+	GROUP_MESSAGE			= 1;
+}
+
+/*
+ * 消息类型
+ */
+enum message_type {
+	TEXT				= 0; // 文本消息
+	AUDIO				= 1; // 语音消息
+}
+
+message msg {
+	message_type type			= 1;
+	bytes data					= 2;
+}
+
+/*
+ * 发送消息请求
+ */
+message send_message_request {
+	uint64 from_user_id				= 1;
+	uint64 to_session_id			= 2;
+	uint64 message_id				= 3; // 防止发送的消息重复，标识本消息，也用来对本连接的消息进行排序
+	uint64 session_type				= 4; 
+	msg msg							= 5;
+}
+
+/*
+ * 确认已收到消息
+ */
+message message_ack {
+	uint64 user_id					= 1; // 发送该消息的用户id
+	uint64 session_id				= 2;
+	uint64 message_id				= 3;
+	session_type type				= 4;
+}
+
+/*
+ * 客户端已经收到信令消息
+ */
+message message_read {
+	uint64 user_id					= 1; // 发送信令的用户id
+	uint64 session_id				= 2;
+	uint64 message_id				= 3;
+	session_type type				= 4;
+}
+
+/*
+ * 通知发送方，接收方已收到消息
+ */
+message message_read_notify {
+	uint64 user_id				= 1; // 发送此信令的用户id
+	uint64 session_id			= 2;
+	uint64 message_id			= 3;
+	session_type type			= 4;
+}
+
+/*
+ * 请求未读消息的数量
+ */
+message unread_message_count_request {
+	uint64 user_id				= 1;
+}
+
+message unread_info {
+	uint64 session_id			= 1;
+	session_type type			= 2;
+	uint64 unread_count			= 3;
+	uint64 latest_message_id	= 4;
+	msg latest_msg				= 5;
+	uint64 from_user_id			= 6;
+}
+
+/*
+ * 返回未读消息的数量
+ */
+message unread_message_count_response {
+	uint64 user_id							= 1;
+	uint64 total_count						= 2;
+	repeated unread_info unread_infos		= 3;
+}
+
+/*
+ * 查询指定message id在指定范围内的消息
+ */
+message query_messages_request {
+	uint64 user_id					= 1;
+	session_type type				= 2;
+	uint64 session_id				= 3;
+	uint64 message_start_id			= 4;
+	uint32 message_count			= 5;
+}
+
+message message_info {
+	uint64 from_user_id				= 1;
+	uint64 session_id				= 2;
+	session_type type				= 3;
+	uint64 create_time				= 4;
+	msg msg							= 5;
+}
+
+/*
+ * 查询的结果
+ */
+message query_message_request {
+	uint64 user_id					= 1;
+	session_type type				= 2;
+	uint64 session_id				= 3;
+	uint64 message_start_id			= 4;
+	repeated msg messages			= 5;
+}

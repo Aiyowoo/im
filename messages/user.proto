@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package im.user;
+
+import "base.proto";
+
+/*
+ * 用户相关操作的消息
+ */
+
+/*
+ * 登录请求
+ */
+message login_request {
+	string user_account						= 1;
+	string password							= 2;
+	.im.base.user_status online_status		= 3;
+	.im.base.client_type client_type		= 4;
+	string client_version					= 5;
+}
+
+enum user_gender_type {
+	man			= 0;
+	women		= 1;
+}
+
+message user_info {
+	uint64 user_id					= 1;
+	string user_account				= 2; // 账户
+	user_gender_type user_gender	= 3; // 性别
+	string user_nick_name			= 4; // 昵称 
+	string avatar_url				= 5; // 用户头像的url
+	string email					= 6; // 邮箱
+	string phone_number				= 7; // 电话号码
+	string sign_info				= 8; // 签名
+}
+
+/*
+ * 登录响应
+ */
+message login_response {
+	.im.base.result	result					= 1;
+	.im.base.user_status online_status		= 2;
+	user_info info							= 3;
+}
+
+/*
+ * 用户退出请求
+ */
+message logout_request {
+}
+
+/*
+ * 用户退出的响应
+ */
+message logout_response {
+	.im.base.result result		= 1;
+}
+
+enum kick_reason {
+	KICK_BY_MOBILE			= 0; // 用户在手机上手动下线电脑上的登陆
+	KICK_BY_OTHER_DEVICE	= 1; // 在相同类型的设备上登陆，被挤掉
+}
+
+/*
+ * 退出用户在某个设备上的登录（服务端发送给客户端，使客户端下线）
+ */
+message kick_user_request {
+	uint64 user_id			= 1;
+	kick_reason reason		= 2;
+}
+
+/*
+ * 退出用户的响应
+ */
+message kick_user_response {
+	.im.base.result result		= 1;
+}
+
+/*
+ * 将在某个设备上的登录下线（客户端发送给服务端）
+ */
+message kick_device_request {
+}
+
+/*
+ * 请求的结果
+ */
+message kick_device_response {
+	.im.base.result result		= 1;
+}

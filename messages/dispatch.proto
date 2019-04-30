@@ -1,0 +1,9 @@
+syntax = "proto3";
+package im.dispatch;
+
+message server_addresses_request {
+}
+
+message server_addresses_response {
+	repeated string addresses	= 2;	// 可以连接的服务器地址
+}
