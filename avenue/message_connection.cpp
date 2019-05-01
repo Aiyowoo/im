@@ -45,6 +45,10 @@ message_connection::~message_connection() {
 	}
 }
 
+void message_connection::request(message* msg) {
+	request(msg, nullptr);
+}
+
 void message_connection::request(message* msg, request_callback_type handler) {
 	assert(msg);
 	post([this, self = shared_from_this(), msg, handler] {
@@ -119,7 +123,9 @@ void message_connection::do_request(message* msg, request_callback_type handler)
 
 	if (!initialized_ || want_close_ || write_closed_) {
 		status s(status::HALF_CLOSED, "write closed or want close write");
-		handler(nullptr, s);
+		if(handler) {
+			handler(nullptr, s);
+		}
 		return;
 	}
 	uint32_t seq = allocate_sequence();
@@ -202,13 +208,19 @@ void message_connection::do_send_message() {
 	while (msg == nullptr && !waiting_messages_.empty()) {
 		msg = waiting_messages_.front();
 		assert(msg);
-		if (msg->is_request() &&
-			request_callbacks_.find(msg->get_sequence()) == request_callbacks_.end()) {
-			DEBUG_LOG("msg[{}] already timeout");
-			delete msg;
-			msg = nullptr;
 
-			waiting_messages_.pop_front();
+		if(msg->is_request()) {
+			auto it = request_callbacks_.find(msg->get_sequence());
+			if(it == request_callbacks_.cend()) {
+				DEBUG_LOG("msg[{}] already timeout");
+				delete msg;
+				msg = nullptr;
+
+				waiting_messages_.pop_front();
+			} else if(!it->second) {
+				// don't care response
+				request_callbacks_.erase(it);
+			}
 		}
 	}
 	if (msg == nullptr) {

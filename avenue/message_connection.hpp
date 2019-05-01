@@ -134,6 +134,11 @@ public:
 	/* 消息相关操作 */
 
 	/*
+	 * 发送请求，不关心response
+	 */
+	void request(message *msg);
+
+	/*
 	 * 发送请求
 	 */
 	void request(message* msg, request_callback_type handler);
