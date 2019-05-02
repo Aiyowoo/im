@@ -41,6 +41,11 @@ class message_connection : public std::enable_shared_from_this<message_connectio
 	stream_type stream_;
 
 	/*
+	 * 连接正在运行（开始连接 -> socket关闭 整个生命过程）
+	 */
+	bool running_;
+
+	/*
 	 * 建立连接，并完成ssl handshake
 	 */
 	bool initialized_;
@@ -174,6 +179,27 @@ protected:
 	timer::timer_id_type wait(timer::clock_type::duration d, const timer::callback_type &callback);
 
 	timer::timer_id_type wait(timer::clock_type::time_point time, const timer::callback_type &callback);
+
+	/*
+	 * 返回连接状态是否正常（即没有任何一端已经关闭了连接）
+	 * 只能在connection io_context的线程内调用
+	 * 否则会造成竞争，限制在connection内部使用，或在connection_pool中调用
+	 */
+	bool ok() const;
+
+	/*
+	 * 连接是否已经在运行（即至少已经开始连接）
+	 * 只能在connection io_context的线程内调用
+	 * 否则会造成竞争，限制在connection内部使用，或在connection_pool中调用
+	 */
+	bool running() const;
+
+	/*
+	 * 设置为已经在运行
+	 * 只能在connection io_context的线程内调用
+	 * 否则会造成竞争，限制在connection内部使用，或在connection_pool中调用
+	 */
+	void set_running(bool running);
 
 public:
 	uint32_t allocate_sequence();

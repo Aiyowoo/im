@@ -24,6 +24,13 @@ public:
 
     std::shared_ptr<server_connection> shared_from_base();
 
+public:
+	/*
+	 * 处理连接和握手错误
+	 * 只能在连接内部调用
+	 */
+	void handle_initialize_error(const status& error);
+
 #ifdef DEBUG
 
     std::string get_extra_log_info() { return ""; }

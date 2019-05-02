@@ -17,13 +17,15 @@ server_connection::server_connection(boost::asio::ip::tcp::socket &socket,
 
 void server_connection::run() {
     INFO_LOG("start to run...");
+	set_running(true);
+
     stream().async_handshake(ssl::stream_base::handshake_type::server,
                              [this, self = shared_from_base()](boost::system::error_code ec) {
                                  if (ec) {
                                      status s(ec.value(),
                                               fmt::format("failed to handshake with client due to error[{}]",
                                                           ec.message()));
-                                     on_initialized(s);
+                                     handle_initialize_error(s);
                                      return;
                                  }
                                  initialize();
@@ -32,6 +34,15 @@ void server_connection::run() {
 
 std::shared_ptr<server_connection> server_connection::shared_from_base() {
     return std::dynamic_pointer_cast<server_connection>(shared_from_this());
+}
+
+void server_connection::handle_initialize_error(const status& error) {
+    // 已经不再运行了
+	set_running(false);
+
+    // fixme: 是否需要关闭socket连接
+
+	on_initialized(error);
 }
 
 }

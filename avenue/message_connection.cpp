@@ -19,7 +19,7 @@ namespace avenue {
 
 message_connection::message_connection(boost::asio::ip::tcp::socket& socket,
                                        boost::asio::ssl::context& ssl_context)
-	: stream_(std::move(socket), ssl_context), initialized_(false), read_closed_(true),
+	: stream_(std::move(socket), ssl_context), running_(false), initialized_(false), read_closed_(true),
 	  write_closed_(true), want_close_(false), timer_(std::make_shared<timer>(stream_.get_io_context())),
 	  recv_message_(nullptr), sequence_(0) {
 #ifdef DEBUG
@@ -29,7 +29,7 @@ message_connection::message_connection(boost::asio::ip::tcp::socket& socket,
 
 message_connection::message_connection(boost::asio::io_context& io_context,
                                        boost::asio::ssl::context& ssl_context)
-	: stream_(io_context, ssl_context), initialized_(false), read_closed_(true),
+	: stream_(io_context, ssl_context), running_(false), initialized_(false), read_closed_(true),
 	  write_closed_(true), want_close_(false), timer_(std::make_shared<timer>(stream_.get_io_context())),
 	  recv_message_(nullptr), sequence_(0) {
 #ifdef DEBUG
@@ -45,38 +45,27 @@ message_connection::~message_connection() {
 	}
 }
 
-void message_connection::request(message* msg) {
-	request(msg, nullptr);
-}
+void message_connection::request(message* msg) { request(msg, nullptr); }
 
 void message_connection::request(message* msg, request_callback_type handler) {
 	assert(msg);
-	post([this, self = shared_from_this(), msg, handler] {
-		do_request(msg, handler);
-	});
+	post([this, self = shared_from_this(), msg, handler] { do_request(msg, handler); });
 }
 
-void message_connection::timed_request(message* msg, clock_type::duration timeout,
+void message_connection::timed_request(message* msg,
+                                       clock_type::duration timeout,
                                        request_callback_type handler) {
 	assert(msg);
 	clock_type::time_point deadline = clock_type::now() + timeout;
-	post([this, self = shared_from_this(), msg, deadline, handler] {
-		do_request(msg, deadline, handler);
-	});
+	post([this, self = shared_from_this(), msg, deadline, handler] { do_request(msg, deadline, handler); });
 }
 
 void message_connection::response(message* msg) {
 	assert(msg);
-	post([this, self = shared_from_this(), msg] {
-		do_response(msg);
-	});
+	post([this, self = shared_from_this(), msg] { do_response(msg); });
 }
 
-void message_connection::close() {
-	post([this, self = shared_from_this()] {
-		do_close();
-	});
-}
+void message_connection::close() { post([this, self = shared_from_this()] { do_close(); }); }
 
 timer::timer_id_type message_connection::wait(timer::clock_type::duration d, const timer::callback_type& callback) {
 	timer::clock_type::time_point invoke_time = clock_type::now() + d;
@@ -84,36 +73,30 @@ timer::timer_id_type message_connection::wait(timer::clock_type::duration d, con
 }
 
 timer::timer_id_type message_connection::
-wait(timer::clock_type::time_point time, const timer::callback_type& callback) {
-	return timer_->wait(time, callback);
-}
+wait(timer::clock_type::time_point time, const timer::callback_type& callback) { return timer_->wait(time, callback); }
 
-void message_connection::post(std::function<void()> handler) {
-	stream_.get_io_context().post(handler);
-}
+bool message_connection::ok() const { return initialized_ && !read_closed_ && !write_closed_ && !want_close_; }
 
-uint32_t message_connection::allocate_sequence() {
-	return ++sequence_;
-}
+bool message_connection::running() const { return running_; }
+
+void message_connection::set_running(bool running) { running_ = running; }
+
+void message_connection::post(std::function<void()> handler) { stream_.get_io_context().post(handler); }
+
+uint32_t message_connection::allocate_sequence() { return ++sequence_; }
 
 void message_connection::on_request_timeout(uint32_t request_id, status s) {
-	if (s.code() == status::OPERATION_CANCELLED) {
-		return;
-	}
+	if (s.code() == status::OPERATION_CANCELLED) { return; }
 
 	// fixme: 超时返回其他错误
 	assert(s);
 	auto it = request_callbacks_.find(request_id);
-	if (it == request_callbacks_.cend()) {
-		return;
-	}
+	if (it == request_callbacks_.cend()) { return; }
 
 	auto handler = it->second;
 	request_callbacks_.erase(it);
 	s.assign(status::TIMEOUT, "request timeout");
-	if (handler) {
-		handler(nullptr, s);
-	}
+	if (handler) { handler(nullptr, s); }
 }
 
 void message_connection::do_request(message* msg, request_callback_type handler) {
@@ -123,9 +106,7 @@ void message_connection::do_request(message* msg, request_callback_type handler)
 
 	if (!initialized_ || want_close_ || write_closed_) {
 		status s(status::HALF_CLOSED, "write closed or want close write");
-		if(handler) {
-			handler(nullptr, s);
-		}
+		if (handler) { handler(nullptr, s); }
 		return;
 	}
 	uint32_t seq = allocate_sequence();
@@ -136,7 +117,8 @@ void message_connection::do_request(message* msg, request_callback_type handler)
 	send_message(msg);
 }
 
-void message_connection::do_request(message* msg, std::chrono::system_clock::time_point deadline,
+void message_connection::do_request(message* msg,
+                                    std::chrono::system_clock::time_point deadline,
                                     message_connection::request_callback_type handler) {
 	assert(msg && msg->is_request());
 
@@ -153,9 +135,9 @@ void message_connection::do_request(message* msg, std::chrono::system_clock::tim
 	assert(request_callbacks_.find(seq) == request_callbacks_.cend());
 	request_callbacks_.insert({seq, handler});
 
-	auto timer_id = timer_->wait(deadline, [this, self = shared_from_this(), seq](const status &s) {
+	auto timer_id = timer_->wait(deadline, [this, self = shared_from_this(), seq](const status& s) {
 		on_request_timeout(seq, s);
-		});
+	});
 	assert(request_id_to_timer_id_.find(seq) == request_id_to_timer_id_.cend());
 	request_id_to_timer_id_[seq] = timer_id;
 
@@ -169,8 +151,8 @@ void message_connection::do_response(message* msg) {
 
 	if (!initialized_ || want_close_ || write_closed_) {
 		/*
-		 * 连接已关闭，不能发送
-		 */
+					   * 连接已关闭，不能发送
+					   */
 		delete msg;
 		return;
 	}
@@ -180,17 +162,13 @@ void message_connection::do_response(message* msg) {
 
 void message_connection::do_close() {
 	DEBUG_LOG("connection want to close");
-	if (!initialized_) {
-		return;
-	}
+	if (!initialized_) { return; }
 	want_close_ = true;
 	if (!write_closed_ && waiting_messages_.empty()) {
 		boost::system::error_code ec;
 		stream_.next_layer().shutdown(asio::ip::tcp::socket::shutdown_send, ec);
 		write_closed_ = true;
-		if (ec) {
-			ERROR_LOG("failed to close socket write due to error[{}]", ec.message());
-		}
+		if (ec) { ERROR_LOG("failed to close socket write due to error[{}]", ec.message()); }
 	}
 }
 
@@ -209,15 +187,16 @@ void message_connection::do_send_message() {
 		msg = waiting_messages_.front();
 		assert(msg);
 
-		if(msg->is_request()) {
+		if (msg->is_request()) {
 			auto it = request_callbacks_.find(msg->get_sequence());
-			if(it == request_callbacks_.cend()) {
+			if (it == request_callbacks_.cend()) {
 				DEBUG_LOG("msg[{}] already timeout");
 				delete msg;
 				msg = nullptr;
 
 				waiting_messages_.pop_front();
-			} else if(!it->second) {
+			}
+			else if (!it->second) {
 				// don't care response
 				request_callbacks_.erase(it);
 			}
@@ -258,12 +237,8 @@ void message_connection::do_send_message() {
 			}
 
 #ifdef DEBUG
-			if (msg->is_request()) {
-				++d_sent_request_count_;
-			}
-			else {
-				++d_sent_response_count_;
-			}
+			if (msg->is_request()) { ++d_sent_request_count_; }
+			else { ++d_sent_response_count_; }
 #endif
 
 			delete msg;
@@ -272,7 +247,6 @@ void message_connection::do_send_message() {
 			// 继续发送消息
 			do_send_message();
 		});
-
 	});
 }
 
@@ -288,9 +262,7 @@ void message_connection::handle_write_error(boost::system::error_code ec) {
 		if (msg->is_request()) {
 			// 没有发送出去的请求，直接回调，发送失败
 			auto it = request_callbacks_.find(msg->get_sequence());
-			if (it != request_callbacks_.end() && it->second) {
-				it->second(nullptr, send_error);
-			}
+			if (it != request_callbacks_.end() && it->second) { it->second(nullptr, send_error); }
 			request_callbacks_.erase(it);
 		}
 		DEBUG_LOG("failed to send message[{}][{}], due to write error", reinterpret_cast<void *>(msg), *msg);
@@ -310,11 +282,7 @@ void message_connection::handle_read_error(boost::system::error_code ec) {
 
 	// 将所有的request都设置为失败，因为不会再有响应了
 	status recv_error(status::RECV_MESSAGE_ERROR, "failed to recv messages");
-	for (const auto& p : request_callbacks_) {
-		if (p.second) {
-			p.second(nullptr, recv_error);
-		}
-	}
+	for (const auto& p : request_callbacks_) { if (p.second) { p.second(nullptr, recv_error); } }
 	request_callbacks_.clear();
 
 	if (write_closed_ || waiting_messages_.empty()) {
@@ -344,9 +312,7 @@ void message_connection::initialize() {
 }
 
 void message_connection::start_receiving_message() {
-	if (recv_message_ == nullptr) {
-		recv_message_ = new message;
-	}
+	if (recv_message_ == nullptr) { recv_message_ = new message; }
 	DEBUG_LOG("wait message header...");
 	auto buffer = asio::buffer(reinterpret_cast<char *>(recv_message_->get_header()), sizeof(message_header));
 	asio::async_read(stream_, buffer, [this, self = shared_from_this()](boost::system::error_code ec, size_t) {
@@ -378,20 +344,12 @@ void message_connection::start_receiving_message() {
 
 void message_connection::handle_received_message(message* msg) {
 	assert(msg);
-	if (msg->is_request()) {
-		handle_request(msg);
-	}
-	else {
-		handle_response(msg);
-	}
+	if (msg->is_request()) { handle_request(msg); }
+	else { handle_response(msg); }
 
 #ifdef DEBUG
-	if (msg->is_request()) {
-		++d_received_request_count_;
-	}
-	else {
-		++d_received_response_count_;
-	}
+	if (msg->is_request()) { ++d_received_request_count_; }
+	else { ++d_received_response_count_; }
 #endif
 }
 
@@ -415,9 +373,7 @@ void message_connection::handle_response(message* msg) {
 	auto handler = it->second;
 	request_callbacks_.erase(it);
 
-	if (handler) {
-		handler(msg, {});
-	}
+	if (handler) { handler(msg, {}); }
 	else {
 		// 不关心请求结果
 		delete msg;
@@ -433,6 +389,9 @@ void message_connection::handle_response(message* msg) {
 }
 
 void avenue::message_connection::clear_all() {
+	// 已经停止运行
+	set_running(false);
+
 	initialized_ = false;
 	boost::system::error_code ec;
 	stream_.next_layer().close(ec);
@@ -448,7 +407,8 @@ std::string message_connection::get_extra_log_info() {
 	                   "sent_request_count[{}] received_response_count[{}] received_request_count[{}] "
 	                   "sent_response_count[{}] timeout_request_count[{}] initialized[{}] "
 	                   "read_closed[{}] write_closed[{}] want_close_write[{}] waiting_send_messages_count[{}]",
-	                   reinterpret_cast<void*>(this), d_create_time_, d_initialized_time_, d_local_addr_, d_remote_addr_,
+	                   reinterpret_cast<void*>(this), d_create_time_, d_initialized_time_, d_local_addr_,
+	                   d_remote_addr_,
 	                   d_sent_request_count_, d_received_response_count_, d_received_request_count_,
 	                   d_sent_response_count_, d_timeout_request_count_, initialized_, read_closed_,
 	                   write_closed_, want_close_, waiting_messages_.size());
