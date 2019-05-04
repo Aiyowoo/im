@@ -259,9 +259,11 @@ void message_connection::handle_write_error(boost::system::error_code ec) {
 	while (!waiting_messages_.empty()) {
 		message* msg = waiting_messages_.front();
 		waiting_messages_.pop_front();
+
+		// fixme: 只有把这条语句放在外面才能编译通过，否则报未定义的it
+		auto it = request_callbacks_.find(msg->get_sequence());
 		if (msg->is_request()) {
 			// 没有发送出去的请求，直接回调，发送失败
-			auto it = request_callbacks_.find(msg->get_sequence());
 			if (it != request_callbacks_.end() && it->second) { it->second(nullptr, send_error); }
 			request_callbacks_.erase(it);
 		}

@@ -4,13 +4,19 @@
 #include "client_connection.hpp"
 #include "timer.hpp"
 
+#include <fmt/format.h>
+
 #include <boost/asio/ip/tcp.hpp>
 
 namespace avenue {
 
 template <typename ConnectionType>
 class connection_pool {
-	using address_type = boost::asio::ip::tcp::endpoint;
+	struct address_type {
+		std::string host_name; // 服务器地址，ip或域名
+		std::string service_name; // 服务名，端口号或服务名
+	};
+
 	/*
 	 * 请求池中的连接时，获得了连接后回调函数类型
 	 */
@@ -41,7 +47,7 @@ class connection_pool {
 	size_t next_;
 
 public:
-	connection_pool(boost::asio::io_context& context, boost::asio::ssl::context &ssl_context);
+	connection_pool(boost::asio::io_context& context, boost::asio::ssl::context& ssl_context);
 	connection_pool(const connection_pool&) = delete;
 	connection_pool& operator=(const connection_pool&) = delete;
 	connection_pool(connection_pool&&) = delete;
@@ -54,14 +60,12 @@ public:
 
 	/*
 	 * 指定要连接到的服务器的地址
-	 * 形如"127.0.0.1:8081"的数组
+	 * 形如"127.0.0.1:8081"的数组，支持域名
+	 * 
+	 * 注意：
+	 * 该函数不能保证线程安全，需要调用方保证
 	 */
-	void connect(const std::vector<std::string>& addresses);
-
-	/*
-	 * 指定要连接的服务器的地址
-	 */
-	void connect(const std::vector<address_type>& addresses);
+	void connect(const std::vector<std::string>& addresses, status& s);
 
 	/*
 	 * 请求一个链接
@@ -69,15 +73,92 @@ public:
 	void get_connection(connection_query_handler handler);
 
 	/*
+	 * todo:
 	 * 请求一个链接，如果在timeout时间内没有可用链接，返回nullptr
 	 */
-	void get_connection(timer::clock_type::duration d, connection_query_handler handler);
+	// void get_connection(timer::clock_type::duration d, connection_query_handler handler);
 
 	/*
 	 * 释放所有链接
 	 */
 	void close();
+
+public:
+	// connection_pool 内部调用
+	template <typename T>
+	void post(T&& t) { context_.post(std::forward<T>(t)); }
+
+	void do_get_connection(connection_query_handler handler);
+
+	void do_close();
 };
+
+template <typename ConnectionType>
+connection_pool<ConnectionType>::connection_pool(boost::asio::io_context& context,
+                                                 boost::asio::ssl::context& ssl_context): context_(context),
+                                                                                          ssl_context_(ssl_context),
+                                                                                          next_(0) {
+}
+
+template <typename ConnectionType>
+void connection_pool<ConnectionType>::connect(const std::vector<std::string>& addresses, status& s) {
+	s.clear();
+	std::vector<address_type> new_added;
+	for (const auto& str : addresses) {
+		auto pos = str.find_last_of(':');
+		if (pos == std::string::npos) {
+			s.assign(status::PARAMETERS_ERROR,
+			         fmt::format("format should be host_name:service_name, not {}", str));
+			return;
+		}
+		address_type address;
+		address.host_name = str.substr(0, pos);
+		address.service_name = str.substr(pos + 1);
+		new_added.push_back(address);
+	}
+
+	addresses_.insert(addresses_.end(), new_added.cbegin(), new_added.cend());
+	connections_.resize(addresses_.size());
+}
+
+template <typename ConnectionType>
+void connection_pool<ConnectionType>::get_connection(connection_query_handler handler) {
+	post([this, handler] { do_get_connection(handler); });
+}
+
+template <typename ConnectionType>
+void connection_pool<ConnectionType>::close() { post([this] { do_close(); }); }
+
+template <typename ConnectionType>
+void connection_pool<ConnectionType>::do_get_connection(connection_query_handler handler) {
+	// 从next_开始遍历所有链接，直到找到一个能用的
+	size_t len = connections_.size();
+	size_t start = next_;
+	std::shared_ptr<ConnectionType> conn;
+	do {
+		if(!connections_[next_] || !connections_[next_]->running()) {
+			// 没有连接或者连接已经关闭没有在运行
+			connections_[next_] = std::make_shared<ConnectionType>(context_, ssl_context_);
+			connections_[next_].run(addresses_[next_].host_name, addresses_[next_].service_name);
+		}
+		if(connections_[next_]->ok()) {
+			// 连接已经初始化成功
+			conn = connections_[next_];
+		}
+		next_ = (next_ + 1) % len;
+	} while (next_ != start && !conn);
+
+	handler(conn);
+}
+
+template <typename ConnectionType>
+void connection_pool<ConnectionType>::do_close() {
+	// 简单的关闭所有链接
+	for(size_t i = 0; i < connections_.size(); ++i) {
+		connections_[i]->close();
+		connections_[i] = nullptr;
+	}
+}
 
 }
 
