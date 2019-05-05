@@ -23,6 +23,6 @@ ADD_EXECUTABLE(client_hub main.cpp user_connection.cpp user_connection.hpp
 user_manager.cpp user_manager.hpp message_connection.cpp message_connection.hpp
 message_connection_pool.cpp message_connection_pool.hpp config.cpp config.hpp)
 TARGET_LINK_LIBRARIES(client_hub avenue fmt::fmt fmt::fmt-header-only ${protobuf_LIBRARIES}
-${Boost_DATE_TIME_LIBRARY} ${Boost_SYSTEM_LIBRARY} OpenSSL::SSL OpenSSL::Crypto comm servers_common)
+${Boost_DATE_TIME_LIBRARY} ${Boost_SYSTEM_LIBRARY} OpenSSL::SSL OpenSSL::Crypto comm server_common)
 
 INSTALL(TARGETS client_hub RUNTIME DESTINATION servers/bin)

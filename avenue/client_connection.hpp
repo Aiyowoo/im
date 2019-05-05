@@ -11,6 +11,9 @@ namespace avenue {
 
 class client_connection : public message_connection {
 
+	template<typename T>
+	friend class connection_pool;
+
 	std::string host_name_;
 	std::string service_name_;
 	boost::asio::ip::tcp::resolver resolver_;

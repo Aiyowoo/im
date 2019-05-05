@@ -9,7 +9,7 @@
  * 连接message_server，将来自客户端的请求转发到message_server处理，
  * 并处理来自message_server的请求，message_server的请求一般只需要将特定消息发送给指定用户而已
  */
-class message_connection : avenue::client_connection {
+class message_connection : public avenue::client_connection {
 public:
 	/*
 	 * 登录请求的回调

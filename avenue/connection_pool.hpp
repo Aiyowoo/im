@@ -44,7 +44,7 @@ class connection_pool {
 	 * 因为连接是线程安全的，所以在请求连接时，并不需要将连接从
 	 * 连接池中剔除，可以直接返回。
 	 */
-	std::vector<ConnectionType> connections_;
+	std::vector<std::shared_ptr<ConnectionType>> connections_;
 
 	/*
 	 * 下次请求将返回的连接的偏移
