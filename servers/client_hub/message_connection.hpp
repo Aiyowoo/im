@@ -41,6 +41,16 @@ public:
 	 * 处理来自message_server的请求
 	 */
 	void on_receive_request(avenue::message* msg) override;
+
+	/*
+	 * 通知message server有用户连上该hub
+	 */
+	void user_connect_notify(user_manager::user_id_type user_id, const user_manager::device_type& device);
+
+	/*
+	 * 通知message server有用户关闭了链接
+	 */
+	void user_disconnect_notify(user_manager::user_id_type user_id, const user_manager::device_type& device);
 };
 
 #endif // CLIENT_HUB_MESSAGE_CONNECTION_H

@@ -4,7 +4,6 @@
 #include <boost/asio.hpp>
 
 #include <unordered_map>
-
 #include <list>
 
 class user_connection;
@@ -33,7 +32,7 @@ public:
 
 	using connections_handler_type = std::function<void(const std::list<device_connection_type>&)>;
 
-	using connection_handler_type = std::function<void(const device_connection_type&)>;
+	using connection_handler_type = std::function<void(const connection_type&)>;
 
 private:
 
@@ -71,7 +70,7 @@ public:
 	/*
 	 * 移除一个链接
 	 */
-	void remote_connection(user_id_type user_id, const device_type& device);
+	void remove_connection(user_id_type user_id, const device_type& device);
 
 	/*
 	 * 请求用户从不同设备连上来的所有的链接
@@ -83,7 +82,11 @@ public:
 	 */
 	void query_connection(user_id_type user_id, const device_type& device, connection_handler_type handler);
 
-private:
+public:
+	/*
+	 * 只能内部调用
+	 */
+
 	template <typename T>
 	void post(T&& t) { context_.post(std::forward<T>(t)); }
 
@@ -93,7 +96,18 @@ private:
 
 	void do_query_connections(user_id_type user_id, connections_handler_type handler);
 
-	void do_query_connection(user_id_type user_id, connection_handler_type handler);
+	void do_query_connection(user_id_type user_id, const device_type &device, connection_handler_type handler);
 };
+
+/*
+ * 初始化，user_manager
+ */
+void init_user_manager(boost::asio::io_context &context);
+
+/*
+ * 获取全局user_manager
+ * 只能在init_user_manager被调用之后使用 
+ */
+user_manager& get_user_manager();
 
 #endif // CLIENT_HUB_USER_MANAGER_H

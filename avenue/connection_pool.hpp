@@ -23,6 +23,11 @@ class connection_pool {
 	using connection_query_handler = std::function<void(std::shared_ptr<ConnectionType>)>;
 
 	/*
+	 * 请求所有可用连接时的回调
+	 */
+	using all_connections_handler = std::function<void(const std::vector<std::shared_ptr<ConnectionType>>&)>;
+
+	/*
 	 * io上下文，保证连接和connection_pool中handler的执行，在
 	 * 只有一个线程调用该context_.run()时，不会造成竞争
 	 */
@@ -73,8 +78,12 @@ public:
 	void get_connection(connection_query_handler handler);
 
 	/*
-	 * todo:
-	 * 请求一个链接，如果在timeout时间内没有可用链接，返回nullptr
+	 * 请求其中的所有连接
+	 */
+	void get_all_connections(all_connections_handler handler);
+
+	/*
+	 * todo: 请求一个链接，如果在timeout时间内没有可用链接，返回nullptr
 	 */
 	// void get_connection(timer::clock_type::duration d, connection_query_handler handler);
 
@@ -89,6 +98,8 @@ public:
 	void post(T&& t) { context_.post(std::forward<T>(t)); }
 
 	void do_get_connection(connection_query_handler handler);
+
+	void do_get_all_connections(all_connections_handler handler);
 
 	void do_close();
 };
@@ -127,6 +138,13 @@ void connection_pool<ConnectionType>::get_connection(connection_query_handler ha
 }
 
 template <typename ConnectionType>
+void connection_pool<ConnectionType>::get_all_connections(all_connections_handler handler) {
+	post([this, handler] {
+		do_get_all_connections(handler);
+	});
+}
+
+template <typename ConnectionType>
 void connection_pool<ConnectionType>::close() { post([this] { do_close(); }); }
 
 template <typename ConnectionType>
@@ -136,25 +154,37 @@ void connection_pool<ConnectionType>::do_get_connection(connection_query_handler
 	size_t start = next_;
 	std::shared_ptr<ConnectionType> conn;
 	do {
-		if(!connections_[next_] || !connections_[next_]->running()) {
+		if (!connections_[next_] || !connections_[next_]->running()) {
 			// 没有连接或者连接已经关闭没有在运行
 			connections_[next_] = std::make_shared<ConnectionType>(context_, ssl_context_);
 			connections_[next_].run(addresses_[next_].host_name, addresses_[next_].service_name);
 		}
-		if(connections_[next_]->ok()) {
+		if (connections_[next_]->ok()) {
 			// 连接已经初始化成功
 			conn = connections_[next_];
 		}
 		next_ = (next_ + 1) % len;
-	} while (next_ != start && !conn);
+	}
+	while (next_ != start && !conn);
 
 	handler(conn);
 }
 
 template <typename ConnectionType>
+void connection_pool<ConnectionType>::do_get_all_connections(all_connections_handler handler) {
+	std::vector<std::shared_ptr<ConnectionType>> conns;
+	for(const auto &conn:connections_) {
+		if(conn->ok()) {
+			conns.push_back(conn);
+		}
+	}
+	handler(conns);
+}
+
+template <typename ConnectionType>
 void connection_pool<ConnectionType>::do_close() {
 	// 简单的关闭所有链接
-	for(size_t i = 0; i < connections_.size(); ++i) {
+	for (size_t i = 0; i < connections_.size(); ++i) {
 		connections_[i]->close();
 		connections_[i] = nullptr;
 	}
