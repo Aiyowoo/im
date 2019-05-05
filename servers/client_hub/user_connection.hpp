@@ -18,6 +18,21 @@ public:
 	 */
 	using device_type = uint32_t;
 
+	/*
+	 * 连接到message server的链接类型
+	 */
+	using server_connection_type = std::shared_ptr<message_connection>;
+
+	/*
+	 * 获取到message server的链接后的回调
+	 */
+	using query_server_connection_handler = std::function<void(server_connection_type)>;
+
+	/*
+	 * 获取到所有到message server的链接后的回调
+	 */
+	using query_all_connections_handler = std::function<void(const std::vector<server_connection_type> &)>;
+
 private:
 	/*
 	 * 是否已经登录
@@ -80,6 +95,16 @@ private:
 	void handle_request(avenue::message* msg);
 
 	void do_squeeze_out();
+
+	/*
+	 * 获取连接到message_server的链接
+	 */
+	void get_server_connection(query_server_connection_handler handler);
+
+	/*
+	 * 获取所有链接到message_server的回调
+	 */
+	void get_all_server_connections(query_all_connections_handler handler);
 };
 
 #endif // !CLIENT_HUB_USER_CONNECTION_H

@@ -39,9 +39,8 @@ message user_info {
  * 登录响应
  */
 message login_response {
-	.im.base.result	result					= 1;
-	.im.base.user_status online_status		= 2;
-	user_info info							= 3;
+	.im.base.user_status online_status		= 1;
+	user_info info							= 2;
 }
 
 /*
@@ -54,7 +53,6 @@ message logout_request {
  * 用户退出的响应
  */
 message logout_response {
-	.im.base.result result		= 1;
 }
 
 enum kick_reason {
@@ -74,7 +72,6 @@ message kick_user_request {
  * 退出用户的响应
  */
 message kick_user_response {
-	.im.base.result result		= 1;
 }
 
 /*
@@ -87,5 +84,4 @@ message kick_device_request {
  * 请求的结果
  */
 message kick_device_response {
-	.im.base.result result		= 1;
 }

@@ -29,6 +29,7 @@ public:
         SEND_MESSAGE_ERROR,
         RECV_MESSAGE_ERROR,
         CONNECT_FAILED,
+        CONNECTION_SQUEEZED_OUT,
         OK = 0
     };
 

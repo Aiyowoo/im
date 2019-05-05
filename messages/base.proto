@@ -79,3 +79,11 @@ enum group_messages {
 	MID_QUERY_GROUP_INFO		= 0;	// 查询组信息
 	MID_QUERY_GROUP_MEMBERS		= 1;	// 查询组内成员信息
 }
+
+/*
+ * 请求出错时，返回给客户端的错误信息
+ */
+message error {
+	int32 code						= 1;
+	string message					= 2;
+}

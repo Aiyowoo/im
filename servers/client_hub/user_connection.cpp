@@ -1,9 +1,11 @@
 #include "user_connection.hpp"
 #include "user_manager.hpp"
 #include "config.hpp"
+#include "message_connection_pool.hpp"
 
 #include <servers/constants.hpp>
 #include <servers/logger.hpp>
+#include <servers/error.hpp>
 
 #include <avenue/message.hpp>
 
@@ -42,6 +44,14 @@ void user_connection::on_receive_request(avenue::message* msg) {
 		return;
 	}
 
+	if (is_squeezed_out_) {
+		// 已经被挤掉了
+		set_error(msg, status::CONNECTION_SQUEEZED_OUT,
+		          fmt::format("user logged in in other device"));
+		response(msg);
+		return;
+	}
+
 	handle_request(msg);
 }
 
@@ -55,11 +65,7 @@ void user_connection::on_closed() {
 	}
 }
 
-void user_connection::squeeze_out() {
-	post([this, self=shared_from_base()] {
-		do_squeeze_out();
-	});
-}
+void user_connection::squeeze_out() { post([this, self=shared_from_base()] { do_squeeze_out(); }); }
 
 void user_connection::wait_login() {
 	wait(std::chrono::seconds(config().get_login_limited_seconds()),
@@ -78,7 +84,7 @@ bool user_connection::is_login_request(avenue::message* msg) {
 }
 
 void user_connection::handle_request(avenue::message* msg) {
-	// TODO: 处理来自客户端的各种请求
+	// 正式处理请求
 }
 
 void user_connection::do_squeeze_out() {
