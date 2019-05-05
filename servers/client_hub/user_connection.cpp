@@ -84,7 +84,7 @@ bool user_connection::is_login_request(avenue::message* msg) {
 }
 
 void user_connection::handle_request(avenue::message* msg) {
-	// 正式处理请求
+	// TODO: 正式处理请求
 }
 
 void user_connection::do_squeeze_out() {
