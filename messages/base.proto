@@ -25,6 +25,14 @@ message result {
 }
 
 /*
+ * client_hub和services之间的通信
+ */
+enum login_messages {
+	USER_LOGGED_IN = 0;
+	USER_LOGGED_OUT = 1;
+}
+
+/*
  * 用户相关操作
  */
 enum user_messages {
@@ -45,10 +53,11 @@ enum user_status {
 }
 
 enum client_type {
-	WINDOWS				= 0;
-	MAC					= 1;
-	IOS					= 2;
-	ANDROID				= 3;
+	ALL					= 0;
+	WINDOWS				= 1;
+	MAC					= 2;
+	IOS					= 3;
+	ANDROID				= 4;
 }
 
 /*

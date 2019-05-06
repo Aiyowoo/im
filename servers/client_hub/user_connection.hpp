@@ -1,6 +1,8 @@
 #ifndef CLIENT_HUB_USER_CONNECTION_H
 #define CLIENT_HUB_USER_CONNECTION_H
 
+#include "service_connection.hpp"
+
 #include <avenue/server_connection.hpp>
 
 /*
@@ -21,7 +23,7 @@ public:
 	/*
 	 * 连接到message server的链接类型
 	 */
-	using server_connection_type = std::shared_ptr<message_connection>;
+	using server_connection_type = std::shared_ptr<service_connection>;
 
 	/*
 	 * 获取到message server的链接后的回调
@@ -101,7 +103,9 @@ private:
 
 	void do_squeeze_out();
 
+	// ReSharper disable CppHidingFunction
 	std::shared_ptr<user_connection> shared_from_base();
+	// ReSharper restore CppHidingFunction
 
 	/*
 	 * 获取连接到message_server的链接

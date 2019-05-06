@@ -1,6 +1,6 @@
 #include "user_manager.hpp"
 #include "user_connection.hpp"
-#include "message_connection_pool.hpp"
+#include "service_connection_pool.hpp"
 
 #include <servers/logger.hpp>
 
@@ -44,8 +44,8 @@ void user_manager::do_add_connection(user_id_type user_id, const device_type& de
 	}
 	else {
 		// 需要通知所有所有message server，用户使用某设备连上了该hub
-		get_message_connection_pool().get_all_connections(
-			[this, user_id, device](const std::vector<std::shared_ptr<message_connection>>& message_conns) {
+		get_service_connection_pool().get_all_connections(
+			[this, user_id, device](const std::vector<std::shared_ptr<service_connection>>& message_conns) {
 				for (auto c : message_conns) {
 					c->user_connect_notify(user_id, device);
 				}
@@ -78,6 +78,14 @@ void user_manager::do_remove_connection(user_id_type user_id, const device_type&
 		connections_.erase(it);
 	}
 	DEBUG_LOG("removed connection for user[{}] device[{}]", user_id, device);
+
+	// 通知service server连接已经移除
+	get_service_connection_pool().get_all_connections(
+		[this, user_id, device](const std::vector<std::shared_ptr<service_connection>>& message_conns) {
+			for (auto c : message_conns) {
+				c->user_disconnect_notify(user_id, device);
+			}
+		});
 }
 
 void user_manager::do_query_connections(user_id_type user_id, connections_handler_type handler) {

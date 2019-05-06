@@ -5,7 +5,7 @@ package im.forward;
 import "base.proto";
 
 message target {
-	uint64 user_id				= 1;
+	uint64 user_id						= 1;
 	im.base.client_type device			= 2;
 }
 
@@ -15,4 +15,17 @@ message target {
 message forward {
 	bytes data					= 1;
 	repeated target targets		= 2;
+}
+
+/*
+ * 用户登陆后，hub发送给service message，通知用户已经登录
+ */
+message user_logged_in {
+	uint64 user_id				= 1;
+	.im.base.client_type device = 2;
+}
+
+message user_logged_out {
+	uint64 user_id				= 1;
+	.im.base.client_type device = 2;
 }

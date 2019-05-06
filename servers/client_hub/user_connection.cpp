@@ -1,7 +1,8 @@
 #include "user_connection.hpp"
 #include "user_manager.hpp"
 #include "config.hpp"
-#include "message_connection_pool.hpp"
+#include "service_connection.hpp"
+#include "service_connection_pool.hpp"
 
 #include <servers/constants.hpp>
 #include <servers/logger.hpp>
@@ -93,15 +94,9 @@ bool user_connection::is_logout_request(avenue::message* msg) {
 }
 
 void user_connection::handle_request(avenue::message* msg, server_connection_type conn) {
-	if (is_login_request(msg)) {
-		handle_login_request(msg, conn);
-	}
-	else if (is_logout_request(msg)) {
-		handle_logout_request(msg, conn);
-	}
-	else {
-		handle_other_request(msg, conn);
-	}
+	if (is_login_request(msg)) { handle_login_request(msg, conn); }
+	else if (is_logout_request(msg)) { handle_logout_request(msg, conn); }
+	else { handle_other_request(msg, conn); }
 }
 
 void user_connection::do_squeeze_out() {
@@ -140,12 +135,12 @@ std::shared_ptr<user_connection> user_connection::shared_from_base() {
 
 void user_connection::get_server_connection(query_server_connection_handler handler) {
 	const auto wrapped_handler = stream().next_layer().get_io_context().wrap(handler);
-	get_message_connection_pool().get_connection(wrapped_handler);
+	get_service_connection_pool().get_connection(wrapped_handler);
 }
 
 void user_connection::get_all_server_connections(query_all_connections_handler handler) {
 	const auto wrapped_handler = stream().next_layer().get_io_context().wrap(handler);
-	get_message_connection_pool().get_all_connections(wrapped_handler);
+	get_service_connection_pool().get_all_connections(wrapped_handler);
 }
 
 void user_connection::handle_login_request(avenue::message* msg, server_connection_type conn) {
@@ -163,7 +158,8 @@ void user_connection::handle_login_request(avenue::message* msg, server_connecti
 	const auto seq = msg->get_sequence();
 	auto resp_handler = stream().get_io_context().wrap(
 		[this, self=shared_from_base(), service_id, message_id, seq](
-		avenue::message* msg, const status& s) {
+		avenue::message* msg,
+		const status& s) {
 			if (!s) {
 				ERROR_LOG("request to message server failed due to error[{}]",
 				          s.message());
@@ -200,7 +196,7 @@ void user_connection::handle_login_request(avenue::message* msg, server_connecti
 }
 
 void user_connection::handle_logout_request(avenue::message* msg, server_connection_type conn) {
-	if(logged_in_) {
+	if (logged_in_) {
 		get_user_manager().remove_connection(user_id_, device_);
 
 		is_squeezed_out_ = false;
@@ -219,7 +215,7 @@ void user_connection::handle_other_request(avenue::message* msg, server_connecti
 	if (!conn) {
 		ERROR_LOG("failed to get message server connection");
 		set_error(msg, status::RUNTIME_ERROR,
-			fmt::format("failed to get message server connection"));
+		          fmt::format("failed to get message server connection"));
 		response(msg);
 		return;
 	}
@@ -231,9 +227,37 @@ void user_connection::handle_other_request(avenue::message* msg, server_connecti
 	/*
 	 * 根据不同服务转发到不同的服务器
 	 */
-	const char *original_data = nullptr;
+	const char* original_data = nullptr;
 	uint32_t original_data_len = 0;
 	msg->get_body(original_data, original_data_len);
 
-	im::forward::forward new_msg;
+	im::forward::forward forward;
+	forward.set_data(original_data, original_data_len);
+	auto target = forward.add_targets();
+	target->set_user_id(user_id_);
+
+	std::string data;
+	forward.SerializeToString(&data);
+	msg->set_body(data);
+
+	conn->request(msg, stream().get_io_context().wrap(
+		              [this, self = shared_from_base(), service_id, message_id, seq](
+		              avenue::message* msg,
+		              const status& s) {
+			              if (!s) {
+				              ERROR_LOG(
+					              "failed to request service[{}] message_id[{}] sequence[{}] from message server due to error[{}]",
+					              service_id, message_id, seq, s.message());
+				              assert(!msg);
+
+				              msg = create_error_message(service_id, message_id, status::RUNTIME_ERROR,
+				                                         "server internal error");
+				              msg->set_sequence(seq);
+				              response(msg);
+				              return;
+			              }
+			              // 将响应转发给client
+			              msg->set_sequence(seq);
+			              response(msg);
+		              }));
 }

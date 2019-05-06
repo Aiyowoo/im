@@ -106,6 +106,15 @@ void message::get_body(char *&body, uint32_t &len) {
     len = get_body_len();
 }
 
+void message::set_body(const std::string& data) {
+	set_body(data.c_str(), data.size());
+}
+
+void message::set_body(const char* data, size_t len) {
+	prepare(len);
+	std::copy_n(data, len, data_);
+}
+
 void message::prepare(uint32_t body_len) {
     clear();
     data_ = new char[body_len];

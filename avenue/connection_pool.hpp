@@ -157,7 +157,7 @@ void connection_pool<ConnectionType>::do_get_connection(connection_query_handler
 		if (!connections_[next_] || !connections_[next_]->running()) {
 			// 没有连接或者连接已经关闭没有在运行
 			connections_[next_] = std::make_shared<ConnectionType>(context_, ssl_context_);
-			connections_[next_].run(addresses_[next_].host_name, addresses_[next_].service_name);
+			connections_[next_]->run(addresses_[next_].host_name, addresses_[next_].service_name);
 		}
 		if (connections_[next_]->ok()) {
 			// 连接已经初始化成功

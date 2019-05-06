@@ -101,6 +101,10 @@ public:
 
     void get_body(char *&body, uint32_t &len);
 
+	void set_body(const std::string& data);
+
+	void set_body(const char* data, size_t len);
+
     void prepare(uint32_t body_len);
 
     void validate(status &s);
