@@ -31,7 +31,7 @@ public:
 	/*
 	 * 获取到所有到message server的链接后的回调
 	 */
-	using query_all_connections_handler = std::function<void(const std::vector<server_connection_type> &)>;
+	using query_all_connections_handler = std::function<void(const std::vector<server_connection_type>&)>;
 
 private:
 	/*
@@ -90,11 +90,18 @@ private:
 	static bool is_login_request(avenue::message* msg);
 
 	/*
+	 * 是否是退出请求
+	 */
+	static bool is_logout_request(avenue::message* msg);
+
+	/*
 	 * 处理请求
 	 */
-	void handle_request(avenue::message* msg);
+	void handle_request(avenue::message* msg, server_connection_type conn);
 
 	void do_squeeze_out();
+
+	std::shared_ptr<user_connection> shared_from_base();
 
 	/*
 	 * 获取连接到message_server的链接
@@ -105,6 +112,23 @@ private:
 	 * 获取所有链接到message_server的回调
 	 */
 	void get_all_server_connections(query_all_connections_handler handler);
+
+	/*
+	 * 处理登录请求
+	 */
+	void handle_login_request(avenue::message *msg, server_connection_type conn);
+
+	/*
+	 * 处理退出请求
+	 */
+	void handle_logout_request(avenue::message *msg, server_connection_type conn);
+
+	/*
+	 * 处理其他请求
+	 * 加上相关信息后，转发给message_server
+	 */
+	void handle_other_request(avenue::message *msg, server_connection_type conn);
+
 };
 
 #endif // !CLIENT_HUB_USER_CONNECTION_H

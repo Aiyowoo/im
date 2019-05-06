@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package im.forward;
+
+import "base.proto";
+
+message target {
+	uint64 user_id				= 1;
+	im.base.client_type device			= 2;
+}
+
+/*
+ * 在client_hub和message_server之间通信使用
+ */
+message forward {
+	bytes data					= 1;
+	repeated target targets		= 2;
+}
