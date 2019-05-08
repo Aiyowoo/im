@@ -116,3 +116,21 @@ bool service_connection::is_kick_device_request(avenue::message* msg) {
 	return msg->get_service_id() == im::base::SID_USER &&
 		msg->get_message_id() == im::base::MID_KICK_DEVICE;
 }
+
+void service_connection::handle_kick_device(avenue::message* msg) {
+	assert(msg);
+	const char* data = nullptr;
+	size_t data_len = 0;
+	msg->get_body(data, data_len);
+
+	im::forward::forward f;
+	if(!f.ParseFromArray(data, data_len)) {
+		ERROR_LOG("failed to parse kick user message");
+		set_error(msg, status::PARAMETERS_ERROR, "failed to parse message");
+		response(msg);
+		return;
+	}
+
+	assert(f.targets_size() == 1);
+	// TODO: implementation
+}
